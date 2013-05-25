@@ -11,3 +11,9 @@
 *.lai
 *.la
 *.a
+
+# Visual Studio files
+Debug/
+Release
+*.aps
+*.suo
