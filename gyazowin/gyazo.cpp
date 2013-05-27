@@ -19,17 +19,10 @@ using namespace Gdiplus;
 #include <string>
 #include <sstream>
 
-// Resource headers
+// Project headers
 #include "resource.h"
-
-// Types
-#ifdef UNICODE
-typedef std::wstring string;
-typedef std::wstringstream stringstream;
-#else
-typedef std::string string;
-typedef std::stringstream stringstream;
-#endif
+#include "util.h"
+using namespace Gyazo;
 
 // Globals
 HINSTANCE hInstance;							// Application instance
@@ -271,11 +264,7 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 		return -1;
 	}
 
-	pImageCodecInfo = (ImageCodecInfo*)(malloc(size));
-	if (pImageCodecInfo == NULL)
-	{
-		return -1;
-	}
+	pImageCodecInfo = (ImageCodecInfo*) new char[size];
 
 	GetImageEncoders(num, size, pImageCodecInfo);
 
@@ -284,12 +273,12 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 		if (wcscmp(pImageCodecInfo[i].MimeType, format) == 0)
 		{
 			*pClsid = pImageCodecInfo[i].Clsid;
-			free(pImageCodecInfo);
+			delete pImageCodecInfo;
 			return i;
 		}    
 	}
 
-	free(pImageCodecInfo);
+	delete pImageCodecInfo;
 	return -1;
 }
 
@@ -904,26 +893,22 @@ BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
 			std::string result;
 
 			// Never so long , but once well
-			while(InternetReadFile(hRequest, (LPVOID) resbuf, 1024, &len) 
+			while (InternetReadFile(hRequest, (LPVOID) resbuf, 1024, &len) 
 				&& len != 0)
 			{
 				result.append(resbuf, len);
 			}
-			result += ".png";
-			// Because it is not NULL terminate the acquisition result
-			//result += '\0';
+
+			std::string id = result.substr(result.find_last_of("/") + 1);
 
 			stringstream url;
-			url << _T("http://ffoxin.github.io/gyazo.htm?img=");
-			url << result.c_str();
-			//url << '\0';
+			url << _T("http://ffoxin.github.io/gyazo.htm?id=") << id.c_str();
 
 			// Copy the URL to the clipboard
-			string s = url.str();
-			setClipBoardText(s.c_str());
+			setClipBoardText(url.str().c_str());
 
-			// Launch a URL
-			//execUrl(url.str().c_str()); 
+			// Launch an URL
+			execUrl(url.str().c_str()); 
 
 			return TRUE;
 		}
