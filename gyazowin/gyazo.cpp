@@ -31,7 +31,7 @@ TCHAR* szWindowClass	= _T("GYAZOWIN");	// Main window class name
 TCHAR* szWindowClassL	= _T("GYAZOWINL");	// Layer window class name
 HWND hLayerWnd;
 
-int ofX, ofY;	// virtual screen offset
+int screenOffsetX, screenOffsetY;	// virtual screen offset
 
 // Declarations
 ATOM				MyRegisterClass(HINSTANCE hInstance);
@@ -48,7 +48,7 @@ VOID				setClipBoardText(const char* str);
 BOOL				convertPNG(LPCTSTR destFile, LPCTSTR srcFile);
 BOOL				savePNG(LPCTSTR fileName, HBITMAP newBMP);
 BOOL				uploadFile(HWND hwnd, LPCTSTR fileName);
-std::string			getId();
+string			getId();
 BOOL				saveId(const TCHAR* str);
 
 // Entry point
@@ -62,32 +62,24 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	MSG msg;
 
-	TCHAR	szThisPath[MAX_PATH];
-	DWORD   sLen;
 
 	// Get app directory
-	sLen = GetModuleFileName(NULL, szThisPath, MAX_PATH);
-	for (unsigned i = sLen; i >= 0; --i)
-	{
-		if (szThisPath[i] == _T('\\'))
-		{
-			szThisPath[i] = _T('\0');
-			break;
-		}
-	}
+	TCHAR szThisPath[MAX_PATH];
+	GetModuleFileName(NULL, szThisPath, MAX_PATH);
+	PathRemoveFileSpec(szThisPath);
 
 	// Set the current directory to app directory
 	SetCurrentDirectory(szThisPath);
 
 	// Upload file if it specified as an argument
-	if ( 2 == __argc )
+	if (__argc == 2)
 	{
 		// Exit by file upload
 		LPCTSTR fileArg = __targv[1];
 		if (isPng(fileArg))
 		{
 			// PNG to upload directly
-			uploadFile(NULL, __targv[1]);
+			uploadFile(NULL, fileArg);
 		}
 		else
 		{
@@ -131,7 +123,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	return (int) msg.wParam;
 }
 
-// Look at the header whether PNG image check ( once )
+// Look at the header whether PNG image check (once)
 BOOL isPng(LPCTSTR fileName)
 {
 	unsigned char pngHead[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
@@ -139,8 +131,8 @@ BOOL isPng(LPCTSTR fileName)
 
 	FILE *fp = NULL;
 
-	if (0 != _tfopen_s(&fp, fileName, _T("rb"))
-		|| 8 != fread(readHead, 1, 8, fp))
+	if (_tfopen_s(&fp, fileName, _T("rb")) != 0
+		|| fread(readHead, 1, 8, fp) != 8)
 	{
 		// Can not read the file
 		return FALSE;
@@ -191,7 +183,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	return RegisterClass(&wc);
 }
 
-// ( I covered with a window full screen ) initialization of instance
+// (I covered with a window full screen) initialization of instance
 BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 {
 	HWND hWnd;
@@ -204,7 +196,8 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 	int screenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
 	// I remember the offset value of x, y
-	ofX = screenOffsetX; ofY = screenOffsetY;
+	screenOffsetX = screenOffsetX;
+	screenOffsetY = screenOffsetY;
 
 	// Completely ni shi taウィthrough clothウをmake ru nn
 	hWnd = CreateWindowEx(
@@ -226,7 +219,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 	// I cover the entire screen
 	MoveWindow(hWnd, screenOffsetX, screenOffsetY, screenWidth, screenHeight, FALSE);
 
-	// ( I troubled and is combed SW_MAXIMIZE) ignore the nCmdShow
+	// (I troubled and is combed SW_MAXIMIZE) ignore the nCmdShow
 	ShowWindow(hWnd, SW_SHOW);
 	UpdateWindow(hWnd);
 
@@ -256,15 +249,14 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 	unsigned num = 0;		// number of image encoders
 	unsigned size = 0;		// size of the image encoder array in bytes
 
-	ImageCodecInfo* pImageCodecInfo = NULL;
-
 	GetImageEncodersSize(&num, &size);
 	if (size == 0)
 	{
 		return -1;
 	}
 
-	pImageCodecInfo = (ImageCodecInfo*) new char[size];
+	//ImageCodecInfo* pImageCodecInfo = new ImageCodecInfo[num];
+	ImageCodecInfo* pImageCodecInfo = reinterpret_cast<ImageCodecInfo*>(new char[size]);
 
 	GetImageEncoders(num, size, pImageCodecInfo);
 
@@ -278,7 +270,7 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 		}    
 	}
 
-	delete pImageCodecInfo;
+	delete[] pImageCodecInfo;
 	return -1;
 }
 
@@ -286,8 +278,7 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 VOID drawRubberband(HDC hdc, LPRECT newRect, BOOL erase)
 {
 	static BOOL firstDraw = TRUE;	// First does not perform to erase the previous band
-	static RECT lastRect  = {0};	// Band that was drawn last
-	static RECT clipRect  = {0};	// Band that was drawn last
+	static RECT clipRect;			// Band that was drawn last
 
 	if (firstDraw)
 	{
@@ -308,27 +299,25 @@ VOID drawRubberband(HDC hdc, LPRECT newRect, BOOL erase)
 	clipRect = *newRect;
 	if (clipRect.right < clipRect.left)
 	{
-		int tmp = clipRect.left;
-		clipRect.left	= clipRect.right;
-		clipRect.right	= tmp;
+		swap(clipRect.right, clipRect.left);
 	}
 	if (clipRect.bottom < clipRect.top)
 	{
-		int tmp = clipRect.top;
-		clipRect.top	= clipRect.bottom;
-		clipRect.bottom	= tmp;
+		swap(clipRect.bottom, clipRect.top);
 	}
 
 	MoveWindow(hLayerWnd, 
-		clipRect.left, clipRect.top, 
-		clipRect.right - clipRect.left + 1, clipRect.bottom - clipRect.top + 1, 
-		true);
+		clipRect.left, 
+		clipRect.top, 
+		clipRect.right - clipRect.left + 1, 
+		clipRect.bottom - clipRect.top + 1, 
+		TRUE);
 }
 
 // Convert to PNG format
 BOOL convertPNG(LPCTSTR destFile, LPCTSTR srcFile)
 {
-	BOOL				res = FALSE;
+	BOOL				result = FALSE;
 
 	GdiplusStartupInput	gdiplusStartupInput;
 	ULONG_PTR			gdiplusToken;
@@ -347,7 +336,7 @@ BOOL convertPNG(LPCTSTR destFile, LPCTSTR srcFile)
 			if (b->Save(destFile, &clsidEncoder, 0) == 0)
 			{
 				// Saveでki ta
-				res = TRUE;
+				result = TRUE;
 			}
 		}
 	}
@@ -356,10 +345,10 @@ BOOL convertPNG(LPCTSTR destFile, LPCTSTR srcFile)
 	delete b;
 	GdiplusShutdown(gdiplusToken);
 
-	return res;
+	return result;
 }
 
-// PNG formatでsave (GDI + Use )
+// PNG formatでsave (GDI + Use)
 BOOL savePNG(LPCTSTR fileName, HBITMAP newBMP)
 {
 	BOOL				result = FALSE;
@@ -401,64 +390,65 @@ LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 	switch (message)
 	{
 	case WM_ERASEBKGND:
-		GetClientRect(hWnd, &clipRect);
+		{
+			GetClientRect(hWnd, &clipRect);
 
-		hdc = GetDC(hWnd);
-		hBrush = CreateSolidBrush(RGB(100, 100, 100));
-		SelectObject(hdc, hBrush);
-		hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
-		SelectObject(hdc, hPen);
-		Rectangle(hdc, 0, 0, clipRect.right, clipRect.bottom);
+			hdc = GetDC(hWnd);
+			hBrush = CreateSolidBrush(RGB(100, 100, 100));
+			SelectObject(hdc, hBrush);
+			hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
+			SelectObject(hdc, hPen);
+			Rectangle(hdc, 0, 0, clipRect.right, clipRect.bottom);
 
-		//The output size of the rectangle
-		int fHeight;
-		fHeight = (-1) * MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-		hFont = CreateFont(
-			fHeight,			// Font height
-			0,					// Text parcels
-			0,					// Angle of text
-			0,					// Angle of the x-axis and the baseline
-			FW_REGULAR,			// The font weight ( thickness )
-			FALSE,				// Italic
-			FALSE,				// Underline
-			FALSE,				// Strike through
-			ANSI_CHARSET,		// Character set
-			OUT_DEFAULT_PRECIS,	// Output Accuracy
-			CLIP_DEFAULT_PRECIS,// Clipping accuracy
-			PROOF_QUALITY,		// Output Quality
-			FIXED_PITCH | FF_MODERN, // Family pitch
-			_T("Tahoma")		// Face name
-			);
+			//The output size of the rectangle
+			int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+			hFont = CreateFont(
+				(-1) * fontHeight,		// Font height
+				0,					// Text parcels
+				0,					// Angle of text
+				0,					// Angle of the x-axis and the baseline
+				FW_REGULAR,			// The font weight (thickness)
+				FALSE,				// Italic
+				FALSE,				// Underline
+				FALSE,				// Strike through
+				ANSI_CHARSET,		// Character set
+				OUT_DEFAULT_PRECIS,	// Output Accuracy
+				CLIP_DEFAULT_PRECIS,// Clipping accuracy
+				PROOF_QUALITY,		// Output Quality
+				FIXED_PITCH | FF_MODERN, // Family pitch
+				_T("Tahoma")		// Face name
+				);
 
-		SelectObject(hdc, hFont);
-		// show size
-		int iWidth, iHeight;
-		iWidth  = clipRect.right  - clipRect.left;
-		iHeight = clipRect.bottom - clipRect.top;
+			SelectObject(hdc, hFont);
+			// show size
+			int iWidth  = clipRect.right  - clipRect.left;
+			int iHeight = clipRect.bottom - clipRect.top;
 
-		TCHAR sWidth[200], sHeight[200];
-		_stprintf_s(sWidth, _T("%d"), iWidth);
-		_stprintf_s(sHeight, _T("%d"), iHeight);
+			TCHAR sWidth[200], sHeight[200];
+			_stprintf_s(sWidth, _T("%d"), iWidth);
+			_stprintf_s(sHeight, _T("%d"), iHeight);
 
-		int w, h, h2;
-		w = (-1) * fHeight * 5 / 2 + 8;
-		h = (-1) * fHeight * 2 + 8;
-		h2 = h + fHeight;
+			int width = fontHeight * 5 / 2 + 8;
+			int heightTop = fontHeight * 2 + 8;
+			int heightBot = heightTop - fontHeight;
+			size_t nWidth = _tcslen(sWidth);
+			size_t nHeight = _tcslen(sHeight);
 
-		SetBkMode(hdc, TRANSPARENT);
-		SetTextColor(hdc, RGB(0, 0, 0));
-		TextOut(hdc, clipRect.right - w + 1, clipRect.bottom - h + 1, sWidth, wcslen(sWidth));
-		TextOut(hdc, clipRect.right - w + 1, clipRect.bottom - h2 + 1, sHeight, wcslen(sHeight));
-		SetTextColor(hdc, RGB(255, 255, 255));
-		TextOut(hdc, clipRect.right - w, clipRect.bottom - h, sWidth, wcslen(sWidth));
-		TextOut(hdc, clipRect.right - w, clipRect.bottom - h2, sHeight, wcslen(sHeight));
+			SetBkMode(hdc, TRANSPARENT);
+			SetTextColor(hdc, RGB(0, 0, 0));
+			TextOut(hdc, clipRect.right - width + 1, clipRect.bottom - heightTop + 1, sWidth, nWidth);
+			TextOut(hdc, clipRect.right - width + 1, clipRect.bottom - heightBot + 1, sHeight, nHeight);
+			SetTextColor(hdc, RGB(255, 255, 255));
+			TextOut(hdc, clipRect.right - width, clipRect.bottom - heightTop, sWidth, nWidth);
+			TextOut(hdc, clipRect.right - width, clipRect.bottom - heightBot, sHeight, nHeight);
 
-		DeleteObject(hPen);
-		DeleteObject(hBrush);
-		DeleteObject(hFont);
-		ReleaseDC(hWnd, hdc);
+			DeleteObject(hPen);
+			DeleteObject(hBrush);
+			DeleteObject(hFont);
+			ReleaseDC(hWnd, hdc);
 
-		return TRUE;
+			return TRUE;
+		}
 		break;
 
 	default:
@@ -498,8 +488,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (onClip)
 		{
 			// Set the new coordinate
-			clipRect.right  = LOWORD(lParam) + ofX;
-			clipRect.bottom = HIWORD(lParam) + ofY;
+			clipRect.right  = LOWORD(lParam) + screenOffsetX;
+			clipRect.bottom = HIWORD(lParam) + screenOffsetY;
 
 			hdc = GetDC(NULL);
 			drawRubberband(hdc, &clipRect, FALSE);
@@ -514,8 +504,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		onClip = TRUE;
 
 		// Set the initial position
-		clipRect.left = LOWORD(lParam) + ofX;
-		clipRect.top  = HIWORD(lParam) + ofY;
+		clipRect.left = LOWORD(lParam) + screenOffsetX;
+		clipRect.top  = HIWORD(lParam) + screenOffsetY;
 
 		// Capture the mouse
 		SetCapture(hWnd);
@@ -530,8 +520,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			ReleaseCapture();
 
 			// Set the new coordinate
-			clipRect.right  = LOWORD(lParam) + ofX;
-			clipRect.bottom = HIWORD(lParam) + ofY;
+			clipRect.right  = LOWORD(lParam) + screenOffsetX;
+			clipRect.bottom = HIWORD(lParam) + screenOffsetY;
 
 			// Screen ni direct drawing,っte -shaped
 			HDC hdc = GetDC(NULL);
@@ -542,21 +532,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// Check coordinate
 			if (clipRect.right < clipRect.left)
 			{
-				int tmp = clipRect.left;
-				clipRect.left	= clipRect.right;
-				clipRect.right	= tmp;
+				swap(clipRect.right, clipRect.left);
 			}
 			if (clipRect.bottom < clipRect.top)
 			{
-				int tmp = clipRect.top;
-				clipRect.top	= clipRect.bottom;
-				clipRect.bottom	= tmp;
+				swap(clipRect.bottom, clipRect.top);
 			}
 
 			// Image capture
-			int iWidth, iHeight;
-			iWidth	= clipRect.right  - clipRect.left + 1;
-			iHeight	= clipRect.bottom - clipRect.top  + 1;
+			int iWidth	= clipRect.right  - clipRect.left + 1;
+			int iHeight	= clipRect.bottom - clipRect.top  + 1;
 
 			if (iWidth == 0 || iHeight == 0)
 			{
@@ -638,10 +623,10 @@ VOID setClipBoardText(const TCHAR* str)
 	OpenClipboard(NULL);
 	EmptyClipboard();
 	SetClipboardData(
-#ifndef UNICODE
-		CF_TEXT
-#else
+#ifdef UNICODE
 		CF_UNICODETEXT
+#else
+		CF_TEXT
 #endif
 		, 
 		hText);
@@ -664,12 +649,12 @@ VOID execUrl(const TCHAR* url)
 }
 
 // I generate load the ID
-std::string getId()
+string getId()
 {
 	TCHAR idFile[MAX_PATH];
 	TCHAR idDir[MAX_PATH];
 
-	SHGetSpecialFolderPath( NULL, idFile, CSIDL_APPDATA, FALSE );
+	SHGetSpecialFolderPath(NULL, idFile, CSIDL_APPDATA, FALSE);
 
 	_tcscat_s(idFile, _T("\\Gyazo"));
 	_tcscpy_s(idDir, idFile);
@@ -678,10 +663,10 @@ std::string getId()
 	const TCHAR* idOldFile = _T("id.txt");
 	BOOL oldFileExist = FALSE;
 
-	std::string idStr;
+	string idStr;
 
 	// First Load ID from the file
-	std::ifstream ifs;
+	ifstream ifs;
 
 	ifs.open(idFile);
 	if (!ifs.fail())
@@ -692,11 +677,11 @@ std::string getId()
 	}
 	else
 	{
-		std::ifstream ifsold;
+		ifstream ifsold;
 		ifsold.open(idOldFile);
 		if (!ifsold.fail())
 		{
-			// ( Compatibility with older versions ) to read the ID from the same directory
+			// (Compatibility with older versions) to read the ID from the same directory
 			ifsold >> idStr;
 			ifsold.close();
 		}
@@ -708,7 +693,6 @@ std::string getId()
 // Save ID
 BOOL saveId(const TCHAR* str)
 {
-
 	TCHAR idFile[MAX_PATH];
 	TCHAR idDir[MAX_PATH];
 
@@ -720,11 +704,9 @@ BOOL saveId(const TCHAR* str)
 
 	const TCHAR* idOldFile = _T("id.txt");
 
-	size_t slen = _tcslen(str) + 1; // NULL;
-
 	// I want to save the ID
-	CreateDirectory(str, NULL);
-	std::ofstream ofs;
+	CreateDirectory(idDir, NULL);
+	ofstream ofs;
 	ofs.open(idFile);
 	if (!ofs.fail())
 	{
@@ -757,10 +739,10 @@ BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
 		_T("Content-type: multipart/form-data; boundary=----BOUNDARYBOUNDARY----");
 
 	std::ostringstream	buf;	// Outgoing messages
-	std::string			idStr;	// ID
 
 	// Get an ID
-	idStr = getId();
+	string idTStr = getId();
+	std::string idStr(idTStr.begin(), idTStr.end());
 
 	// Configuring Message
 	// -- "id" part
@@ -805,7 +787,7 @@ BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
 	// Message completion
 	std::string oMsg(buf.str());
 
-	// WinInetをpreparation (proxy required Full setをはuse )
+	// WinInetをpreparation (proxy required Full setをはuse)
 	HINTERNET hSession = InternetOpen(szTitle, 
 		INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
 	if (hSession == NULL)
@@ -863,7 +845,7 @@ BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
 
 		// state codeを 取得
 		HttpQueryInfo(hRequest, HTTP_QUERY_STATUS_CODE, resCode, &resLen, 0);
-		if ( _ttoi(resCode) != 200 )
+		if (_ttoi(resCode) != 200)
 		{
 			// upload 失敗 (status error)
 			MessageBox(hwnd, _T("Failed to upload (unexpected result code, under maintainance?)"),
