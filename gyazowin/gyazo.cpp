@@ -381,29 +381,28 @@ BOOL savePNG(LPCTSTR fileName, HBITMAP newBMP)
 // Layer window procedure
 LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	HDC		hdc;
-	RECT	clipRect	= {0, 0, 500, 500};
-	HBRUSH	hBrush;
-	HPEN	hPen;
-	HFONT	hFont;
-
 	switch (message)
 	{
 	case WM_ERASEBKGND:
 		{
-			GetClientRect(hWnd, &clipRect);
+			RECT winRect;
+			GetWindowRect(hWnd, &winRect);
+			SIZE clipRect = { winRect.right - winRect.left, winRect.bottom - winRect.top };
 
-			hdc = GetDC(hWnd);
-			hBrush = CreateSolidBrush(RGB(100, 100, 100));
+			HDC hdc = GetDC(hWnd);
+			HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
 			SelectObject(hdc, hBrush);
-			hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
+			HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
 			SelectObject(hdc, hPen);
-			Rectangle(hdc, 0, 0, clipRect.right, clipRect.bottom);
+			Rectangle(hdc, 0, 0, clipRect.cx, clipRect.cy);
+
+			TEXTMETRIC tm;
+			GetTextMetrics(hdc, &tm);
 
 			//The output size of the rectangle
 			int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-			hFont = CreateFont(
-				(-1) * fontHeight,		// Font height
+			HFONT hFont = CreateFont(
+				(-1) * fontHeight,	// Font height
 				0,					// Text parcels
 				0,					// Angle of text
 				0,					// Angle of the x-axis and the baseline
@@ -420,28 +419,50 @@ LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 				);
 
 			SelectObject(hdc, hFont);
-			// show size
-			int iWidth  = clipRect.right  - clipRect.left;
-			int iHeight = clipRect.bottom - clipRect.top;
-
-			TCHAR sWidth[200], sHeight[200];
-			_stprintf_s(sWidth, _T("%d"), iWidth);
-			_stprintf_s(sHeight, _T("%d"), iHeight);
-
-			int width = fontHeight * 5 / 2 + 8;
-			int heightTop = fontHeight * 2 + 8;
-			int heightBot = heightTop - fontHeight;
-			size_t nWidth = _tcslen(sWidth);
-			size_t nHeight = _tcslen(sHeight);
 
 			SetBkMode(hdc, TRANSPARENT);
-			SetTextColor(hdc, RGB(0, 0, 0));
-			TextOut(hdc, clipRect.right - width + 1, clipRect.bottom - heightTop + 1, sWidth, nWidth);
-			TextOut(hdc, clipRect.right - width + 1, clipRect.bottom - heightBot + 1, sHeight, nHeight);
-			SetTextColor(hdc, RGB(255, 255, 255));
-			TextOut(hdc, clipRect.right - width, clipRect.bottom - heightTop, sWidth, nWidth);
-			TextOut(hdc, clipRect.right - width, clipRect.bottom - heightBot, sHeight, nHeight);
 
+			SIZE textSize, textPos;
+			TCHAR sText[100];
+			size_t nText;
+			const int border = 5;
+
+			// draw top left coordinates (top left corner)
+			_stprintf_s(sText, _T("%d:%d"), winRect.left, winRect.top);
+			nText = _tcslen(sText);
+			textPos.cx = border;
+			textPos.cy = border;
+
+			SetTextColor(hdc, RGB(0, 0, 0));
+			TextOut(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
+			SetTextColor(hdc, RGB(255, 255, 255));
+			TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
+
+			// draw bottom right coordinates (bottom right corner)
+			_stprintf_s(sText, _T("%d:%d"), winRect.right, winRect.bottom);
+			nText = _tcslen(sText);
+			GetTextExtentPoint(hdc, sText, nText, &textSize);
+			textPos.cx = clipRect.cx - textSize.cx - border;
+			textPos.cy = clipRect.cy - textSize.cy - border;
+
+			SetTextColor(hdc, RGB(0, 0, 0));
+			TextOut(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
+			SetTextColor(hdc, RGB(255, 255, 255));
+			TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
+
+			// draw crop size (center)
+			_stprintf_s(sText, _T("%d:%d"), clipRect.cx, clipRect.cy);
+			nText = _tcslen(sText);
+			GetTextExtentPoint(hdc, sText, nText, &textSize);
+			textPos.cx = (clipRect.cx - textSize.cx) / 2;
+			textPos.cy = (clipRect.cy - textSize.cy) / 2;
+
+			SetTextColor(hdc, RGB(0, 0, 0));
+			TextOut(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
+			SetTextColor(hdc, RGB(255, 255, 255));
+			TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
+
+			// Release resources
 			DeleteObject(hPen);
 			DeleteObject(hBrush);
 			DeleteObject(hFont);
