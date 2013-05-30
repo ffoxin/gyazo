@@ -13,23 +13,23 @@
 namespace Gyazo
 {
 #ifdef UNICODE
-	typedef std::wstring		string;
+	typedef std::wstring		tstring;
 
-	typedef std::wstringstream	stringstream;
-	typedef std::wostringstream	ostringstream;
-	typedef std::wistringstream	istringstream;
+	typedef std::wstringstream	tstringstream;
+	typedef std::wostringstream	tostringstream;
+	typedef std::wistringstream	tistringstream;
 
-	typedef std::wofstream		ofstream;
-	typedef std::wifstream		ifstream;
+	typedef std::wofstream		tofstream;
+	typedef std::wifstream		tifstream;
 #else
-	typedef std::string			string;
+	typedef std::string			tstring;
 
-	typedef std::stringstream	stringstream;
-	typedef std::ostringstream	ostringstream;
-	typedef std::istringstream	istringstream;
+	typedef std::stringstream	tstringstream;
+	typedef std::ostringstream	tostringstream;
+	typedef std::istringstream	tistringstream;
 
-	typedef std::ofstream		ofstream;
-	typedef std::ifstream		ifstream;
+	typedef std::ofstream		tofstream;
+	typedef std::ifstream		tifstream;
 #endif
 
 	template<typename T>

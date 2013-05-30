@@ -20,12 +20,13 @@ using namespace Gdiplus;
 #include <sstream>
 
 // Project headers
+#include "gdiinit.h"
 #include "resource.h"
 #include "util.h"
 using namespace Gyazo;
 
 // Globals
-HINSTANCE hInstance;							// Application instance
+HINSTANCE hInstance;						// Application instance
 TCHAR* szTitle			= _T("Gyazo");		// Text in the title bar
 TCHAR* szWindowClass	= _T("GYAZOWIN");	// Main window class name
 TCHAR* szWindowClassL	= _T("GYAZOWINL");	// Layer window class name
@@ -34,28 +35,30 @@ HWND hLayerWnd;
 int screenOffsetX, screenOffsetY;	// virtual screen offset
 
 // Declarations
-ATOM				MyRegisterClass(HINSTANCE hInstance);
+ATOM				RegisterGyazoClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK	LayerWndProc(HWND, UINT, WPARAM, LPARAM);
 
-int					GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
+int					GetEncoderClsid(LPCWSTR format, CLSID* pClsid);
 
-BOOL				isPng(LPCTSTR fileName);
-VOID				drawRubberband(HDC hdc, LPRECT newRect, BOOL erase);
-VOID				execUrl(const TCHAR* url);
-VOID				setClipBoardText(const char* str);
-BOOL				convertPNG(LPCTSTR destFile, LPCTSTR srcFile);
-BOOL				savePNG(LPCTSTR fileName, HBITMAP newBMP);
-BOOL				uploadFile(HWND hwnd, LPCTSTR fileName);
-string			getId();
-BOOL				saveId(const TCHAR* str);
+bool				IsPng(LPCTSTR fileName);
+void				DrawRubberband(HDC hdc, LPRECT newRect, bool erase);
+void				ExecUrl(LPCTSTR url);
+void				SetClipBoardText(LPCTSTR str);
+bool				ImageToPng(Image* image, LPCTSTR fileName);
+bool				ConvertPNG(LPCTSTR destFile, LPCTSTR srcFile);
+bool				SavePNG(LPCTSTR fileName, HBITMAP hBmp);
+bool				UploadFile(HWND hwnd, LPCTSTR fileName);
+tstring				GetId();
+bool				SaveId(LPCTSTR str);
+int					ErrorMessage(HWND hwnd, LPCTSTR lpText);
 
 // Entry point
 int APIENTRY _tWinMain(HINSTANCE hInstance,
 					   HINSTANCE hPrevInstance,
-					   LPTSTR    lpCmdLine,
-					   int       nCmdShow)
+					   LPTSTR lpCmdLine,
+					   int nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
@@ -76,10 +79,10 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	{
 		// Exit by file upload
 		LPCTSTR fileArg = __targv[1];
-		if (isPng(fileArg))
+		if (IsPng(fileArg))
 		{
 			// PNG to upload directly
-			uploadFile(NULL, fileArg);
+			UploadFile(NULL, fileArg);
 		}
 		else
 		{
@@ -88,16 +91,15 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			GetTempPath(MAX_PATH, tmpDir);
 			GetTempFileName(tmpDir, _T("gya"), 0, tmpFile);
 
-			if (convertPNG(tmpFile, fileArg))
+			if (ConvertPNG(tmpFile, fileArg))
 			{
 				//Upload
-				uploadFile(NULL, tmpFile);
+				UploadFile(NULL, tmpFile);
 			}
 			else
 			{
-				// Can not be converted into PNG ...
-				MessageBox(NULL, _T("Cannot convert this image"), szTitle, 
-					MB_OK | MB_ICONERROR);
+				// Can not be converted into PNG
+				ErrorMessage(NULL, _T("Cannot convert this image"));
 			}
 			DeleteFile(tmpFile);
 		}
@@ -105,7 +107,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	}
 
 	// To register a window class
-	MyRegisterClass(hInstance);
+	RegisterGyazoClass(hInstance);
 
 	// I run the application initialization :
 	if (!InitInstance (hInstance, nCmdShow))
@@ -124,7 +126,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 }
 
 // Look at the header whether PNG image check (once)
-BOOL isPng(LPCTSTR fileName)
+bool IsPng(LPCTSTR fileName)
 {
 	unsigned char pngHead[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 	unsigned char readHead[8];
@@ -135,50 +137,49 @@ BOOL isPng(LPCTSTR fileName)
 		|| fread(readHead, 1, 8, fp) != 8)
 	{
 		// Can not read the file
-		return FALSE;
+		return false;
 	}
 	fclose(fp);
 
 	// compare
 	if (memcmp(pngHead, readHead, sizeof(pngHead)) != 0)
 	{
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
-
+	return true;
 }
 
 // To register a window class
-ATOM MyRegisterClass(HINSTANCE hInstance)
+ATOM RegisterGyazoClass(HINSTANCE hInstance)
 {
 	WNDCLASS wc;
 
 	// Main window
-	wc.style         = 0;							// Do not send a WM_PAINT
-	wc.lpfnWndProc   = WndProc;
-	wc.cbClsExtra    = 0;
-	wc.cbWndExtra    = 0;
-	wc.hInstance     = hInstance;
-	wc.hIcon         = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-	wc.hCursor       = LoadCursor(NULL, IDC_CROSS);	// + Cursor
-	wc.hbrBackground = 0;							// Background
-	wc.lpszMenuName  = 0;
-	wc.lpszClassName = szWindowClass;
+	wc.style			= 0;							// Do not send a WM_PAINT
+	wc.lpfnWndProc		= WndProc;
+	wc.cbClsExtra		= 0;
+	wc.cbWndExtra		= 0;
+	wc.hInstance		= hInstance;
+	wc.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+	wc.hCursor			= LoadCursor(NULL, IDC_CROSS);	// + Cursor
+	wc.hbrBackground	= 0;							// Background
+	wc.lpszMenuName		= 0;
+	wc.lpszClassName	= szWindowClass;
 
 	RegisterClass(&wc);
 
 	// Layer window
-	wc.style         = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc   = LayerWndProc;
-	wc.cbClsExtra    = 0;
-	wc.cbWndExtra    = 0;
-	wc.hInstance     = hInstance;
-	wc.hIcon         = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-	wc.hCursor       = LoadCursor(NULL, IDC_CROSS);	// + Cursor
-	wc.hbrBackground = (HBRUSH) GetStockObject(WHITE_BRUSH);
-	wc.lpszMenuName  = 0;
-	wc.lpszClassName = szWindowClassL;
+	wc.style			= CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc		= LayerWndProc;
+	wc.cbClsExtra		= 0;
+	wc.cbWndExtra		= 0;
+	wc.hInstance		= hInstance;
+	wc.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+	wc.hCursor			= LoadCursor(NULL, IDC_CROSS);	// + Cursor
+	wc.hbrBackground	= (HBRUSH) GetStockObject(WHITE_BRUSH);
+	wc.lpszMenuName		= 0;
+	wc.lpszClassName	= szWindowClassL;
 
 	return RegisterClass(&wc);
 }
@@ -244,7 +245,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 
 // I get the CLSID of the Encoder corresponding to the specified format
 // Cited from MSDN Library: Retrieving the Class Identifier for an Encoder
-int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
+int GetEncoderClsid(LPCWSTR format, CLSID* pClsid)
 {
 	unsigned num = 0;		// number of image encoders
 	unsigned size = 0;		// size of the image encoder array in bytes
@@ -267,17 +268,17 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
 			*pClsid = pImageCodecInfo[i].Clsid;
 			delete pImageCodecInfo;
 			return i;
-		}    
+		}
 	}
 
 	delete[] pImageCodecInfo;
 	return -1;
 }
 
-// Drawing rubber band .
-VOID drawRubberband(HDC hdc, LPRECT newRect, BOOL erase)
+// Drawing rubber band
+void DrawRubberband(HDC hdc, LPRECT newRect, bool erase)
 {
-	static BOOL firstDraw = TRUE;	// First does not perform to erase the previous band
+	static bool firstDraw = true;	// First does not perform to erase the previous band
 	static RECT clipRect;			// Band that was drawn last
 
 	if (firstDraw)
@@ -286,7 +287,7 @@ VOID drawRubberband(HDC hdc, LPRECT newRect, BOOL erase)
 		ShowWindow(hLayerWnd, SW_SHOW);
 		UpdateWindow(hLayerWnd);
 
-		firstDraw = FALSE;
+		firstDraw = false;
 	}
 
 	if (erase)
@@ -314,66 +315,54 @@ VOID drawRubberband(HDC hdc, LPRECT newRect, BOOL erase)
 		TRUE);
 }
 
-// Convert to PNG format
-BOOL convertPNG(LPCTSTR destFile, LPCTSTR srcFile)
+// Save Image class data to file
+bool ImageToPng(Image* image, LPCTSTR fileName)
 {
-	BOOL				result = FALSE;
+	bool result = false;
 
-	GdiplusStartupInput	gdiplusStartupInput;
-	ULONG_PTR			gdiplusToken;
-	CLSID				clsidEncoder;
-
-	// Full initialization GDI +
-	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-
-	Image *b = new Image(srcFile, 0);
-
-	if (b->GetLastStatus() == 0)
+	if (image->GetLastStatus() == 0)
 	{
-		if (GetEncoderClsid(L"image/png", &clsidEncoder))
+		CLSID clsidEncoder;
+		if (GetEncoderClsid(L"image/png", &clsidEncoder) != -1)
 		{
-			// save!
-			if (b->Save(destFile, &clsidEncoder, 0) == 0)
+			if (image->Save(fileName, &clsidEncoder, 0) == 0)
 			{
-				// Saveでki ta
-				result = TRUE;
+				result = true;
 			}
 		}
 	}
 
+	return result;
+}
+
+// Convert to PNG format
+bool ConvertPNG(LPCTSTR destFile, LPCTSTR srcFile)
+{
+	// Initialization GDI+
+	GdiPlusInit();
+
+	Image* image = new Image(srcFile, 0);
+
+	bool result = ImageToPng(image, destFile);
+
 	// Clean up
-	delete b;
-	GdiplusShutdown(gdiplusToken);
+	delete image;
 
 	return result;
 }
 
 // PNG formatでsave (GDI + Use)
-BOOL savePNG(LPCTSTR fileName, HBITMAP newBMP)
+bool SavePNG(LPCTSTR fileName, HBITMAP hBmp)
 {
-	BOOL				result = FALSE;
+	// Initialization GDI+
+	GdiPlusInit();
 
-	GdiplusStartupInput	gdiplusStartupInput;
-	ULONG_PTR			gdiplusToken;
-	CLSID				clsidEncoder;
+	Bitmap* bitmap = new Bitmap(hBmp, NULL);
 
-	// Full initialization GDI +
-	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-
-	// Create a Bitmap from HBITMAP
-	Bitmap *b = new Bitmap(newBMP, NULL);
-
-	if (GetEncoderClsid(L"image/png", &clsidEncoder))
-	{
-		if (b->Save(fileName, &clsidEncoder, 0) == 0)
-		{
-			result = TRUE;
-		}
-	}
+	bool result = ImageToPng(bitmap, fileName);
 
 	// Clean up
-	delete b;
-	GdiplusShutdown(gdiplusToken);
+	delete bitmap;
 
 	return result;
 }
@@ -399,7 +388,7 @@ LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			TEXTMETRIC tm;
 			GetTextMetrics(hdc, &tm);
 
-			//The output size of the rectangle
+			// The output size of the rectangle
 			int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
 			HFONT hFont = CreateFont(
 				(-1) * fontHeight,	// Font height
@@ -427,7 +416,7 @@ LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			size_t nText;
 			const int border = 5;
 
-			// draw top left coordinates (top left corner)
+			// Draw top left coordinates (top left corner)
 			_stprintf_s(sText, _T("%d:%d"), winRect.left, winRect.top);
 			nText = _tcslen(sText);
 			textPos.cx = border;
@@ -438,7 +427,7 @@ LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			SetTextColor(hdc, RGB(255, 255, 255));
 			TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
 
-			// draw bottom right coordinates (bottom right corner)
+			// Draw bottom right coordinates (bottom right corner)
 			_stprintf_s(sText, _T("%d:%d"), winRect.right, winRect.bottom);
 			nText = _tcslen(sText);
 			GetTextExtentPoint(hdc, sText, nText, &textSize);
@@ -450,7 +439,7 @@ LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			SetTextColor(hdc, RGB(255, 255, 255));
 			TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
 
-			// draw crop size (center)
+			// Draw crop size (center)
 			_stprintf_s(sText, _T("%d:%d"), clipRect.cx, clipRect.cy);
 			nText = _tcslen(sText);
 			GetTextExtentPoint(hdc, sText, nText, &textSize);
@@ -484,9 +473,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	HDC hdc;
 
-	static BOOL onClip		= FALSE;
-	static BOOL firstDraw	= TRUE;
-	static RECT clipRect	= {0, 0, 0, 0};
+	static bool isClip		= false;
+	static RECT clipRect	= {};
 
 	switch (message)
 	{
@@ -506,14 +494,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_MOUSEMOVE:
-		if (onClip)
+		if (isClip)
 		{
 			// Set the new coordinate
-			clipRect.right  = LOWORD(lParam) + screenOffsetX;
-			clipRect.bottom = HIWORD(lParam) + screenOffsetY;
+			clipRect.right	= LOWORD(lParam) + screenOffsetX;
+			clipRect.bottom	= HIWORD(lParam) + screenOffsetY;
 
 			hdc = GetDC(NULL);
-			drawRubberband(hdc, &clipRect, FALSE);
+			DrawRubberband(hdc, &clipRect, false);
 
 			ReleaseDC(NULL, hdc);
 		}
@@ -522,11 +510,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_LBUTTONDOWN:
 		// Clip start
-		onClip = TRUE;
+		isClip = true;
 
 		// Set the initial position
-		clipRect.left = LOWORD(lParam) + screenOffsetX;
-		clipRect.top  = HIWORD(lParam) + screenOffsetY;
+		clipRect.left	= LOWORD(lParam) + screenOffsetX;
+		clipRect.top	= HIWORD(lParam) + screenOffsetY;
 
 		// Capture the mouse
 		SetCapture(hWnd);
@@ -535,20 +523,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_LBUTTONUP:
 		{
 			// Clip end
-			onClip = FALSE;
+			isClip = false;
 
 			// And release the mouse capture
 			ReleaseCapture();
 
 			// Set the new coordinate
-			clipRect.right  = LOWORD(lParam) + screenOffsetX;
-			clipRect.bottom = HIWORD(lParam) + screenOffsetY;
+			clipRect.right	= LOWORD(lParam) + screenOffsetX;
+			clipRect.bottom	= HIWORD(lParam) + screenOffsetY;
 
 			// Screen ni direct drawing,っte -shaped
 			HDC hdc = GetDC(NULL);
 
 			// I turn off the line
-			drawRubberband(hdc, &clipRect, TRUE);
+			DrawRubberband(hdc, &clipRect, true);
 
 			// Check coordinate
 			if (clipRect.right < clipRect.left)
@@ -561,8 +549,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 
 			// Image capture
-			int iWidth	= clipRect.right  - clipRect.left + 1;
-			int iHeight	= clipRect.bottom - clipRect.top  + 1;
+			int iWidth	= clipRect.right - clipRect.left + 1;
+			int iHeight	= clipRect.bottom - clipRect.top + 1;
 
 			if (iWidth == 0 || iHeight == 0)
 			{
@@ -573,8 +561,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 
 			// Create a bitmap buffer
-			HBITMAP newBMP = CreateCompatibleBitmap(hdc, iWidth, iHeight);
-			HDC	    newDC  = CreateCompatibleDC(hdc);
+			HBITMAP	newBMP	= CreateCompatibleBitmap(hdc, iWidth, iHeight);
+			HDC		newDC	= CreateCompatibleDC(hdc);
 
 			// Associated
 			SelectObject(newDC, newBMP);
@@ -591,15 +579,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			GetTempPath(MAX_PATH, tmpDir);
 			GetTempFileName(tmpDir, _T("gya"), 0, tmpFile);
 
-			if (savePNG(tmpFile, newBMP))
+			if (SavePNG(tmpFile, newBMP))
 			{
-				uploadFile(hWnd, tmpFile);
+				UploadFile(hWnd, tmpFile);
 			}
 			else
 			{
 				// PNG save failed
-				MessageBox(hWnd, _T("Cannot save png image"), szTitle, 
-					MB_OK | MB_ICONERROR);
+				ErrorMessage(hWnd, _T("Cannot save png image"));
 			}
 
 			// Clean up
@@ -626,7 +613,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 // Copy text to clipboard
-VOID setClipBoardText(const TCHAR* str)
+void SetClipBoardText(LPCTSTR str)
 {
 	HGLOBAL	hText;
 	LPTSTR	pText;
@@ -658,7 +645,7 @@ VOID setClipBoardText(const TCHAR* str)
 }
 
 // I open a browser (char *) URL that is specified
-VOID execUrl(const TCHAR* url)
+void ExecUrl(LPCTSTR url)
 {
 	// Run the open command
 	SHELLEXECUTEINFO lsw = {};
@@ -669,42 +656,45 @@ VOID execUrl(const TCHAR* url)
 	ShellExecuteEx(&lsw);
 }
 
-// I generate load the ID
-string getId()
+template<size_t SzDir, size_t SzFile>
+void GetIdPaths(TCHAR (& idDir)[SzDir], TCHAR (& idFile)[SzFile])
 {
-	TCHAR idFile[MAX_PATH];
-	TCHAR idDir[MAX_PATH];
+	SHGetSpecialFolderPath(NULL, idDir, CSIDL_APPDATA, FALSE);
 
-	SHGetSpecialFolderPath(NULL, idFile, CSIDL_APPDATA, FALSE);
-
-	_tcscat_s(idFile, _T("\\Gyazo"));
-	_tcscpy_s(idDir, idFile);
+	_tcscat_s(idDir, _T("\\Gyazo"));
+	_tcscpy_s(idFile, idDir);
 	_tcscat_s(idFile, _T("\\id.txt"));
+}
+
+// I generate load the ID
+tstring GetId()
+{
+	TCHAR idFile[MAX_PATH], idDir[MAX_PATH];
+
+	GetIdPaths(idDir, idFile);
 
 	const TCHAR* idOldFile = _T("id.txt");
-	BOOL oldFileExist = FALSE;
 
-	string idStr;
-
-	// First Load ID from the file
-	ifstream ifs;
+	// load ID from the file
+	tifstream ifs;
+	tstring idStr;
 
 	ifs.open(idFile);
 	if (!ifs.fail())
 	{
-		// I read the ID
+		// read the ID
 		ifs >> idStr;
 		ifs.close();
 	}
 	else
 	{
-		ifstream ifsold;
-		ifsold.open(idOldFile);
-		if (!ifsold.fail())
+		ifs.close();
+		ifs.open(idOldFile);
+		if (!ifs.fail())
 		{
 			// (Compatibility with older versions) to read the ID from the same directory
-			ifsold >> idStr;
-			ifsold.close();
+			ifs >> idStr;
+			ifs.close();
 		}
 	}
 
@@ -712,22 +702,15 @@ string getId()
 }
 
 // Save ID
-BOOL saveId(const TCHAR* str)
+bool SaveId(LPCTSTR str)
 {
-	TCHAR idFile[MAX_PATH];
-	TCHAR idDir[MAX_PATH];
+	TCHAR idFile[MAX_PATH], idDir[MAX_PATH];
 
-	SHGetSpecialFolderPath(NULL, idFile, CSIDL_APPDATA, FALSE);
-
-	_tcscat_s(idFile, _T("\\Gyazo"));
-	_tcscpy_s(idDir, idFile);
-	_tcscat_s(idFile, _T("\\id.txt"));
-
-	const TCHAR* idOldFile = _T("id.txt");
+	GetIdPaths(idDir, idFile);
 
 	// I want to save the ID
 	CreateDirectory(idDir, NULL);
-	ofstream ofs;
+	tofstream ofs;
 	ofs.open(idFile);
 	if (!ofs.fail())
 	{
@@ -735,6 +718,7 @@ BOOL saveId(const TCHAR* str)
 		ofs.close();
 
 		// Delete the old configuration file
+		const TCHAR* idOldFile = _T("id.txt");
 		if (PathFileExists(idOldFile))
 		{
 			DeleteFile(idOldFile);
@@ -742,28 +726,29 @@ BOOL saveId(const TCHAR* str)
 	}
 	else
 	{
-		return FALSE;
+		return true;
 	}
 
-	return TRUE;
+	return true;
 }
 
 // I want to upload a PNG file .
-BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
+bool UploadFile(HWND hwnd, LPCTSTR fileName)
 {
-	const TCHAR* UPLOAD_SERVER	= _T("gyazo.com");
-	const TCHAR* UPLOAD_PATH	= _T("/upload.cgi");
+	LPCTSTR UPLOAD_SERVER	= _T("gyazo.com");
+	LPCTSTR UPLOAD_PATH		= _T("/upload.cgi");
+	LPCTSTR	HOST_PATH		= _T("http://ffoxin.github.io/gyazo.htm?id=");
 
-	const char*  sBoundary = "----BOUNDARYBOUNDARY----";		// boundary
-	const char   sCrLf[]   = { 0xd, 0xa, 0x0 };					// Diverted (CR + LF)
-	const TCHAR* szHeader  = 
+	const char*	sBoundary = "----BOUNDARYBOUNDARY----";		// boundary
+	const char	sCrLf[] = { 0xd, 0xa, 0x0 };				// Diverted (CR + LF)
+	LPCTSTR szHeader = 
 		_T("Content-type: multipart/form-data; boundary=----BOUNDARYBOUNDARY----");
 
-	std::ostringstream	buf;	// Outgoing messages
+	std::ostringstream buf;	// Outgoing messages
 
 	// Get an ID
-	string idTStr = getId();
-	std::string idStr(idTStr.begin(), idTStr.end());
+	tstring tidStr = GetId();
+	std::string idStr(tidStr.begin(), tidStr.end());
 
 	// Configuring Message
 	// -- "id" part
@@ -786,14 +771,14 @@ BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
 	//buf << sCrLf;
 	buf << sCrLf;
 
-	// I read a PNG file : text
+	// Read a PNG file
 	std::ifstream png;
 	png.open(fileName, std::ios::binary);
 	if (png.fail())
 	{
-		MessageBox(hwnd, _T("PNG open failed"), szTitle, MB_ICONERROR | MB_OK);
 		png.close();
-		return FALSE;
+		ErrorMessage(hwnd, _T("PNG open failed"));
+		return false;
 	}
 	buf << png.rdbuf();		// read all & append to buffer
 	png.close();
@@ -806,16 +791,19 @@ BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
 	buf << sCrLf;
 
 	// Message completion
-	std::string oMsg(buf.str());
+	std::string msg(buf.str());
 
-	// WinInetをpreparation (proxy required Full setをはuse)
-	HINTERNET hSession = InternetOpen(szTitle, 
-		INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+	// WinInet preparation (proxy required Full setをはuse)
+	HINTERNET hSession = InternetOpen(
+		szTitle, 
+		INTERNET_OPEN_TYPE_PRECONFIG, 
+		NULL, 
+		NULL, 
+		0);
 	if (hSession == NULL)
 	{
-		MessageBox(hwnd, _T("Cannot configure wininet"),
-			szTitle, MB_ICONERROR | MB_OK);
-		return FALSE;
+		ErrorMessage(hwnd, _T("Cannot configure wininet"));
+		return false;
 	}
 
 	// Access point
@@ -824,8 +812,7 @@ BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
 		NULL, NULL, INTERNET_SERVICE_HTTP, 0, NULL);
 	if (hSession == NULL)
 	{
-		MessageBox(hwnd, _T("Cannot initiate connection"),
-			szTitle, MB_ICONERROR | MB_OK);
+		ErrorMessage(hwnd, _T("Cannot initiate connection"));
 		return FALSE;
 	}
 
@@ -833,31 +820,30 @@ BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
 	HINTERNET hRequest = HttpOpenRequest(hConnection,
 		_T("POST"), UPLOAD_PATH, NULL,
 		NULL, NULL, INTERNET_FLAG_DONT_CACHE | INTERNET_FLAG_RELOAD, NULL);
-	if (hSession == NULL)
+	if (hRequest == NULL)
 	{
-		MessageBox(hwnd, _T("Cannot compose post request"),
-			szTitle, MB_ICONERROR | MB_OK);
-		return FALSE;
+		ErrorMessage(hwnd, _T("Cannot compose post request"));
+		return false;
 	}
 
 	// User Agentを 指定
-	const TCHAR* ua = _T("User-Agent: Gyazowin/1.0\r\n");
+	const TCHAR* userAgent = _T("User-Agent: Gyazowin/1.0\r\n");
 	BOOL bResult = HttpAddRequestHeaders(
-		hRequest, ua, _tcslen(ua), 
+		hRequest, userAgent, _tcslen(userAgent), 
 		HTTP_ADDREQ_FLAG_ADD | HTTP_ADDREQ_FLAG_REPLACE);
 	if (bResult == FALSE)
 	{
-		MessageBox(hwnd, _T("Cannot set user agent"),
-			szTitle, MB_ICONERROR | MB_OK);
-		return FALSE;
+		ErrorMessage(hwnd, _T("Cannot set user agent"));
+		return false;
 	}
 
 	// Requirementsをmessenger
-	if (HttpSendRequest(hRequest,
+	bResult = HttpSendRequest(hRequest,
 		szHeader,
 		lstrlen(szHeader),
-		(LPVOID)oMsg.c_str(),
-		(DWORD) oMsg.length()))
+		(LPVOID)msg.c_str(),
+		(DWORD) msg.length());
+	if (bResult == TRUE)
 	{
 		// Success requiresは
 
@@ -869,30 +855,30 @@ BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
 		if (_ttoi(resCode) != 200)
 		{
 			// upload 失敗 (status error)
-			MessageBox(hwnd, _T("Failed to upload (unexpected result code, under maintainance?)"),
-				szTitle, MB_ICONERROR | MB_OK);
+			ErrorMessage(hwnd, _T("Failed to upload (unexpected result code, under maintainance?)"));
 		}
 		else
 		{
-			// upload succeeded
+			// Upload succeeded
 
-			// get new id
+			// Get new id
 			DWORD idLen = 100;
-			TCHAR newid[100];
+			TCHAR idUrl[100];
 
-			memset(newid, 0, idLen*sizeof(TCHAR));	
-			_tcscpy_s(newid, _T("X-Gyazo-Id"));
+			memset(idUrl, 0, idLen * sizeof(TCHAR));	
+			_tcscpy_s(idUrl, _T("X-Gyazo-Id"));
 
-			HttpQueryInfo(hRequest, HTTP_QUERY_CUSTOM, newid, &idLen, 0);
-			if (GetLastError() != ERROR_HTTP_HEADER_NOT_FOUND && idLen != 0)
+			HttpQueryInfo(hRequest, HTTP_QUERY_CUSTOM, idUrl, &idLen, 0);
+			if (GetLastError() != ERROR_HTTP_HEADER_NOT_FOUND 
+				&& idLen != 0)
 			{
-				//save new id
-				saveId(newid);
+				// Save new id
+				SaveId(idUrl);
 			}
 
-			// I read (URL) Results
+			// Read URL results
 			DWORD len;
-			char  resbuf[1024];
+			char resbuf[1024];
 			std::string result;
 
 			// Never so long , but once well
@@ -904,23 +890,31 @@ BOOL uploadFile(HWND hwnd, LPCTSTR fileName)
 
 			std::string id = result.substr(result.find_last_of("/") + 1);
 
-			stringstream url;
-			url << _T("http://ffoxin.github.io/gyazo.htm?id=") << id.c_str();
+			tstringstream url;
+			url << HOST_PATH << id.c_str();
+
+			const TCHAR* tUrl = url.str().c_str();
 
 			// Copy the URL to the clipboard
-			setClipBoardText(url.str().c_str());
+			SetClipBoardText(tUrl);
 
 			// Launch an URL
-			execUrl(url.str().c_str()); 
+			ExecUrl(tUrl); 
 
-			return TRUE;
+			return true;
 		}
 	}
 	else
 	{
-		// Upload failed ...
-		MessageBox(hwnd, _T("Failed to upload"), szTitle, MB_ICONERROR | MB_OK);
+		// Upload failed
+		ErrorMessage(hwnd, _T("Failed to upload"));
+		return false;
 	}
 
-	return FALSE;
+	return false;
+}
+
+int ErrorMessage(HWND hwnd, LPCTSTR lpText)
+{
+	return MessageBox(hwnd, lpText,	szTitle, MB_ICONERROR | MB_OK);
 }

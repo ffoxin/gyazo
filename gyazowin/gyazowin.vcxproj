@@ -84,6 +84,7 @@
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="gdiinit.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
