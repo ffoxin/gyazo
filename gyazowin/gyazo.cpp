@@ -27,9 +27,9 @@ using namespace Gyazo;
 
 // Globals
 HINSTANCE hInstance;						// Application instance
-TCHAR* szTitle			= _T("Gyazo");		// Text in the title bar
-TCHAR* szWindowClass	= _T("GYAZOWIN");	// Main window class name
-TCHAR* szWindowClassL	= _T("GYAZOWINL");	// Layer window class name
+LPCTSTR szTitle			= _T("Gyazo");		// Text in the title bar
+LPCTSTR szWindowClass	= _T("GYAZOWIN");	// Main window class name
+LPCTSTR szWindowClassL	= _T("GYAZOWINL");	// Layer window class name
 HWND hLayerWnd;
 
 int screenOffsetX, screenOffsetY;	// virtual screen offset
@@ -47,8 +47,8 @@ void				DrawRubberband(HDC hdc, LPRECT newRect, bool erase);
 void				ExecUrl(LPCTSTR url);
 void				SetClipBoardText(LPCTSTR str);
 bool				ImageToPng(Image* image, LPCTSTR fileName);
-bool				ConvertPNG(LPCTSTR destFile, LPCTSTR srcFile);
-bool				SavePNG(LPCTSTR fileName, HBITMAP hBmp);
+bool				ConvertPng(LPCTSTR destFile, LPCTSTR srcFile);
+bool				SavePng(LPCTSTR fileName, HBITMAP hBmp);
 bool				UploadFile(HWND hwnd, LPCTSTR fileName);
 tstring				GetId();
 bool				SaveId(LPCTSTR str);
@@ -64,7 +64,6 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
 	MSG msg;
-
 
 	// Get app directory
 	TCHAR szThisPath[MAX_PATH];
@@ -91,7 +90,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			GetTempPath(MAX_PATH, tmpDir);
 			GetTempFileName(tmpDir, _T("gya"), 0, tmpFile);
 
-			if (ConvertPNG(tmpFile, fileArg))
+			if (ConvertPng(tmpFile, fileArg))
 			{
 				//Upload
 				UploadFile(NULL, tmpFile);
@@ -336,10 +335,10 @@ bool ImageToPng(Image* image, LPCTSTR fileName)
 }
 
 // Convert to PNG format
-bool ConvertPNG(LPCTSTR destFile, LPCTSTR srcFile)
+bool ConvertPng(LPCTSTR destFile, LPCTSTR srcFile)
 {
 	// Initialization GDI+
-	GdiPlusInit();
+	const GdiPlusInit& gpi = GdiPlusInit();
 
 	Image* image = new Image(srcFile, 0);
 
@@ -352,10 +351,10 @@ bool ConvertPNG(LPCTSTR destFile, LPCTSTR srcFile)
 }
 
 // PNG formatでsave (GDI + Use)
-bool SavePNG(LPCTSTR fileName, HBITMAP hBmp)
+bool SavePng(LPCTSTR fileName, HBITMAP hBmp)
 {
 	// Initialization GDI+
-	GdiPlusInit();
+	const GdiPlusInit& gpi = GdiPlusInit();
 
 	Bitmap* bitmap = new Bitmap(hBmp, NULL);
 
@@ -579,7 +578,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			GetTempPath(MAX_PATH, tmpDir);
 			GetTempFileName(tmpDir, _T("gya"), 0, tmpFile);
 
-			if (SavePNG(tmpFile, newBMP))
+			if (SavePng(tmpFile, newBMP))
 			{
 				UploadFile(hWnd, tmpFile);
 			}
@@ -673,7 +672,7 @@ tstring GetId()
 
 	GetIdPaths(idDir, idFile);
 
-	const TCHAR* idOldFile = _T("id.txt");
+	LPCTSTR idOldFile = _T("id.txt");
 
 	// load ID from the file
 	tifstream ifs;
@@ -718,7 +717,7 @@ bool SaveId(LPCTSTR str)
 		ofs.close();
 
 		// Delete the old configuration file
-		const TCHAR* idOldFile = _T("id.txt");
+		LPCTSTR idOldFile = _T("id.txt");
 		if (PathFileExists(idOldFile))
 		{
 			DeleteFile(idOldFile);
@@ -737,7 +736,7 @@ bool UploadFile(HWND hwnd, LPCTSTR fileName)
 {
 	LPCTSTR UPLOAD_SERVER	= _T("gyazo.com");
 	LPCTSTR UPLOAD_PATH		= _T("/upload.cgi");
-	LPCTSTR	HOST_PATH		= _T("http://ffoxin.github.io/gyazo.htm?id=");
+	LPCTSTR	SHARE_PATH		= _T("http://ffoxin.github.io/gyazo.htm?id=");
 
 	const char*	sBoundary = "----BOUNDARYBOUNDARY----";		// boundary
 	const char	sCrLf[] = { 0xd, 0xa, 0x0 };				// Diverted (CR + LF)
@@ -827,7 +826,7 @@ bool UploadFile(HWND hwnd, LPCTSTR fileName)
 	}
 
 	// User Agentを 指定
-	const TCHAR* userAgent = _T("User-Agent: Gyazowin/1.0\r\n");
+	LPCTSTR userAgent = _T("User-Agent: Gyazowin/1.0\r\n");
 	BOOL bResult = HttpAddRequestHeaders(
 		hRequest, userAgent, _tcslen(userAgent), 
 		HTTP_ADDREQ_FLAG_ADD | HTTP_ADDREQ_FLAG_REPLACE);
@@ -890,10 +889,11 @@ bool UploadFile(HWND hwnd, LPCTSTR fileName)
 
 			std::string id = result.substr(result.find_last_of("/") + 1);
 
-			tstringstream url;
-			url << HOST_PATH << id.c_str();
+			tostringstream urlStream;
+			urlStream << SHARE_PATH << id.c_str();
 
-			const TCHAR* tUrl = url.str().c_str();
+			const tstring sUrl = urlStream.str();
+			LPCTSTR tUrl = sUrl.c_str();
 
 			// Copy the URL to the clipboard
 			SetClipBoardText(tUrl);
