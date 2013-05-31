@@ -25,12 +25,16 @@ using namespace Gdiplus;
 #include "util.h"
 using namespace Gyazo;
 
+// Constants
+LPCTSTR szTitle				= _T("Gyazo");		// Text in the title bar
+LPCTSTR szWindowMainClass	= _T("GYAZOWINM");	// Main window class name
+LPCTSTR szWindowLayerClass	= _T("GYAZOWINL");	// Layer window class name
+LPCTSTR szWindowCursorClass	= _T("GYAZOWINC");	// Cursor window class name
+
 // Globals
-HINSTANCE hInstance;						// Application instance
-LPCTSTR szTitle			= _T("Gyazo");		// Text in the title bar
-LPCTSTR szWindowClass	= _T("GYAZOWIN");	// Main window class name
-LPCTSTR szWindowClassL	= _T("GYAZOWINL");	// Layer window class name
+HINSTANCE hInstance;				// Application instance
 HWND hLayerWnd;
+HWND hCursorWnd;
 
 int screenOffsetX, screenOffsetY;	// virtual screen offset
 
@@ -39,6 +43,7 @@ ATOM				RegisterGyazoClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK	LayerWndProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK	CursorWndProc(HWND, UINT, WPARAM, LPARAM);
 
 int					GetEncoderClsid(LPCWSTR format, CLSID* pClsid);
 
@@ -51,7 +56,7 @@ bool				ConvertPng(LPCTSTR destFile, LPCTSTR srcFile);
 bool				SavePng(LPCTSTR fileName, HBITMAP hBmp);
 bool				UploadFile(HWND hwnd, LPCTSTR fileName);
 tstring				GetId();
-bool				SaveId(LPCTSTR str);
+bool				SaveId(LPCTSTR sId);
 int					ErrorMessage(HWND hwnd, LPCTSTR lpText);
 
 // Entry point
@@ -164,7 +169,7 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance)
 	wc.hCursor			= LoadCursor(NULL, IDC_CROSS);	// + Cursor
 	wc.hbrBackground	= 0;							// Background
 	wc.lpszMenuName		= 0;
-	wc.lpszClassName	= szWindowClass;
+	wc.lpszClassName	= szWindowMainClass;
 
 	RegisterClass(&wc);
 
@@ -178,7 +183,21 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance)
 	wc.hCursor			= LoadCursor(NULL, IDC_CROSS);	// + Cursor
 	wc.hbrBackground	= (HBRUSH) GetStockObject(WHITE_BRUSH);
 	wc.lpszMenuName		= 0;
-	wc.lpszClassName	= szWindowClassL;
+	wc.lpszClassName	= szWindowLayerClass;
+
+	RegisterClass(&wc);
+
+	// Cursor window
+	wc.style			= CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc		= CursorWndProc;
+	wc.cbClsExtra		= 0;
+	wc.cbWndExtra		= 0;
+	wc.hInstance		= hInstance;
+	wc.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+	wc.hCursor			= LoadCursor(NULL, IDC_CROSS);	// + Cursor
+	wc.hbrBackground	= 0;
+	wc.lpszMenuName		= 0;
+	wc.lpszClassName	= szWindowCursorClass;
 
 	return RegisterClass(&wc);
 }
@@ -206,7 +225,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 		| WS_EX_NOACTIVATE
 #endif
 		,
-		szWindowClass, NULL, WS_POPUP,
+		szWindowMainClass, NULL, WS_POPUP,
 		0, 0, 0, 0,
 		NULL, NULL, hInst, NULL);
 
@@ -233,11 +252,21 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 		| WS_EX_LAYERED | WS_EX_NOACTIVATE
 #endif
 		,
-		szWindowClassL, NULL, WS_POPUP,
+		szWindowLayerClass, NULL, WS_POPUP,
 		100, 100, 300, 300,
 		hWnd, NULL, hInst, NULL);
 
 	SetLayeredWindowAttributes(hLayerWnd, RGB(255, 0, 0), 100, LWA_COLORKEY|LWA_ALPHA);
+
+	hCursorWnd = CreateWindowEx(
+		WS_EX_TOOLWINDOW
+#if (_WIN32_WINNT >= 0x0500)
+		| WS_EX_LAYERED | WS_EX_NOACTIVATE
+#endif
+		,
+		szWindowCursorClass, NULL, WS_POPUP,
+		100, 100, 300, 300,
+		hWnd, NULL, hInst, NULL);
 
 	return TRUE;
 }
@@ -314,6 +343,35 @@ void DrawRubberband(HDC hdc, LPRECT newRect, bool erase)
 		TRUE);
 }
 
+// Drawing rubber band
+void DrawCoordinates(HDC hdc, LPRECT newRect, bool erase)
+{
+	static bool firstDraw = true;	// First does not perform to erase the previous band
+	static RECT coordRect;			// Band that was drawn last
+
+	if (firstDraw)
+	{
+		// View layer window
+		ShowWindow(hCursorWnd, SW_SHOW);
+		UpdateWindow(hCursorWnd);
+
+		firstDraw = false;
+	}
+
+	if (erase)
+	{
+		// I hide the layer window
+		ShowWindow(hCursorWnd, SW_HIDE);
+	}
+
+	MoveWindow(hCursorWnd, 
+		coordRect.left, 
+		coordRect.top, 
+		coordRect.right - coordRect.left + 1, 
+		coordRect.bottom - coordRect.top + 1, 
+		TRUE);
+}
+
 // Save Image class data to file
 bool ImageToPng(Image* image, LPCTSTR fileName)
 {
@@ -366,6 +424,27 @@ bool SavePng(LPCTSTR fileName, HBITMAP hBmp)
 	return result;
 }
 
+int DrawLabel(HDC hdc, SIZE textPos, LPCTSTR sText, int nText)
+{
+	int result;
+
+	SetTextColor(hdc, RGB(0, 0, 0));
+	result = TextOut(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
+	if (result == 0)
+	{
+		return result;
+	}
+
+	SetTextColor(hdc, RGB(255, 255, 255));
+	result = TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
+	if (result == 0)
+	{
+		return result;
+	}
+
+	return result;
+}
+
 // Layer window procedure
 LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -383,9 +462,6 @@ LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
 			SelectObject(hdc, hPen);
 			Rectangle(hdc, 0, 0, clipRect.cx, clipRect.cy);
-
-			TEXTMETRIC tm;
-			GetTextMetrics(hdc, &tm);
 
 			// The output size of the rectangle
 			int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
@@ -421,10 +497,7 @@ LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			textPos.cx = border;
 			textPos.cy = border;
 
-			SetTextColor(hdc, RGB(0, 0, 0));
-			TextOut(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
-			SetTextColor(hdc, RGB(255, 255, 255));
-			TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
+			DrawLabel(hdc, textPos, sText, nText);
 
 			// Draw bottom right coordinates (bottom right corner)
 			_stprintf_s(sText, _T("%d:%d"), winRect.right, winRect.bottom);
@@ -433,10 +506,7 @@ LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			textPos.cx = clipRect.cx - textSize.cx - border;
 			textPos.cy = clipRect.cy - textSize.cy - border;
 
-			SetTextColor(hdc, RGB(0, 0, 0));
-			TextOut(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
-			SetTextColor(hdc, RGB(255, 255, 255));
-			TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
+			DrawLabel(hdc, textPos, sText, nText);
 
 			// Draw crop size (center)
 			_stprintf_s(sText, _T("%d:%d"), clipRect.cx, clipRect.cy);
@@ -445,10 +515,75 @@ LRESULT CALLBACK LayerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 			textPos.cx = (clipRect.cx - textSize.cx) / 2;
 			textPos.cy = (clipRect.cy - textSize.cy) / 2;
 
-			SetTextColor(hdc, RGB(0, 0, 0));
-			TextOut(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
-			SetTextColor(hdc, RGB(255, 255, 255));
-			TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
+			DrawLabel(hdc, textPos, sText, nText);
+
+			// Release resources
+			DeleteObject(hPen);
+			DeleteObject(hBrush);
+			DeleteObject(hFont);
+			ReleaseDC(hWnd, hdc);
+
+			return TRUE;
+		}
+		break;
+
+	default:
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+
+	return FALSE;
+}
+
+// Cursor window procedure
+LRESULT CALLBACK CursorWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_ERASEBKGND:
+		{
+			HDC hdc = GetDC(hWnd);
+			HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
+			SelectObject(hdc, hBrush);
+			HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
+			SelectObject(hdc, hPen);
+
+			// The output size of the rectangle
+			int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+			HFONT hFont = CreateFont(
+				(-1) * fontHeight,	// Font height
+				0,					// Text parcels
+				0,					// Angle of text
+				0,					// Angle of the x-axis and the baseline
+				FW_REGULAR,			// The font weight (thickness)
+				FALSE,				// Italic
+				FALSE,				// Underline
+				FALSE,				// Strike through
+				ANSI_CHARSET,		// Character set
+				OUT_DEFAULT_PRECIS,	// Output Accuracy
+				CLIP_DEFAULT_PRECIS,// Clipping accuracy
+				PROOF_QUALITY,		// Output Quality
+				FIXED_PITCH | FF_MODERN, // Family pitch
+				_T("Tahoma")		// Face name
+				);
+
+			SelectObject(hdc, hFont);
+
+			SetBkMode(hdc, TRANSPARENT);
+
+			SIZE textPos;
+			TCHAR sText[100];
+			const int offset = 10;
+
+			int mouseX = LOWORD(lParam) + screenOffsetX;
+			int mouseY = HIWORD(lParam) + screenOffsetY;
+
+			// Draw mouse coordinates
+			_stprintf_s(sText, _T("%d:%d"), mouseX, mouseY);
+			size_t nText = _tcslen(sText);
+			textPos.cx = /*mouseX +*/ offset;
+			textPos.cy = /*mouseY +*/ offset;
+
+			DrawLabel(hdc, textPos, sText, nText);
 
 			// Release resources
 			DeleteObject(hPen);
@@ -493,14 +628,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_MOUSEMOVE:
-		if (isClip)
 		{
-			// Set the new coordinate
-			clipRect.right	= LOWORD(lParam) + screenOffsetX;
-			clipRect.bottom	= HIWORD(lParam) + screenOffsetY;
+			int mouseX = LOWORD(lParam) + screenOffsetX;
+			int mouseY = HIWORD(lParam) + screenOffsetY;
 
 			hdc = GetDC(NULL);
-			DrawRubberband(hdc, &clipRect, false);
+
+			if (isClip)
+			{
+				// Set the new coordinate
+				clipRect.right	= LOWORD(lParam) + screenOffsetX;
+				clipRect.bottom	= HIWORD(lParam) + screenOffsetY;
+
+				DrawRubberband(hdc, &clipRect, false);
+			}
+			/*else
+			{
+				clipRect.right = 100;
+				clipRect.bottom = 100;
+				
+				DrawCoordinates(hdc, &clipRect, false);
+			}*/
 
 			ReleaseDC(NULL, hdc);
 		}
@@ -655,77 +803,87 @@ void ExecUrl(LPCTSTR url)
 	ShellExecuteEx(&lsw);
 }
 
-template<size_t SzDir, size_t SzFile>
-void GetIdPaths(TCHAR (& idDir)[SzDir], TCHAR (& idFile)[SzFile])
+LPCTSTR GetIdDirPath()
 {
-	SHGetSpecialFolderPath(NULL, idDir, CSIDL_APPDATA, FALSE);
+	static TCHAR idDir[MAX_PATH] = {};
 
-	_tcscat_s(idDir, _T("\\Gyazo"));
-	_tcscpy_s(idFile, idDir);
-	_tcscat_s(idFile, _T("\\id.txt"));
+	if (*idDir == TCHAR(0))
+	{
+		SHGetSpecialFolderPath(NULL, idDir, CSIDL_APPDATA, FALSE);
+		_tcscat_s(idDir, _T("\\Gyazo"));
+	}
+
+	return idDir;
+}
+
+LPCTSTR GetIdFilePath()
+{
+	static TCHAR idFile[MAX_PATH] = {};
+
+	if (*idFile == TCHAR(0))
+	{
+		_tcscpy(idFile, GetIdDirPath());
+		_tcscat(idFile, _T("\\id.txt"));
+	}
+
+	return idFile;
 }
 
 // I generate load the ID
 tstring GetId()
 {
-	TCHAR idFile[MAX_PATH], idDir[MAX_PATH];
-
-	GetIdPaths(idDir, idFile);
-
-	LPCTSTR idOldFile = _T("id.txt");
-
 	// load ID from the file
 	tifstream ifs;
-	tstring idStr;
+	tstring sId;
 
-	ifs.open(idFile);
+	ifs.open(GetIdFilePath());
 	if (!ifs.fail())
 	{
 		// read the ID
-		ifs >> idStr;
+		ifs >> sId;
 		ifs.close();
 	}
 	else
 	{
+		// (Compatibility with older versions) to read the ID from the same directory
+		LPCTSTR idFile = _T("id.txt");
+
 		ifs.close();
-		ifs.open(idOldFile);
+		ifs.open(idFile);
 		if (!ifs.fail())
 		{
-			// (Compatibility with older versions) to read the ID from the same directory
-			ifs >> idStr;
+			ifs >> sId;
 			ifs.close();
 		}
 	}
 
-	return idStr;
+	return sId;
 }
 
 // Save ID
-bool SaveId(LPCTSTR str)
+bool SaveId(LPCTSTR sId)
 {
-	TCHAR idFile[MAX_PATH], idDir[MAX_PATH];
+	// save the ID to file
+	CreateDirectory(GetIdDirPath(), NULL);
 
-	GetIdPaths(idDir, idFile);
-
-	// I want to save the ID
-	CreateDirectory(idDir, NULL);
 	tofstream ofs;
-	ofs.open(idFile);
+	ofs.open(GetIdFilePath());
 	if (!ofs.fail())
 	{
-		ofs << str;
+		ofs << sId;
 		ofs.close();
 
 		// Delete the old configuration file
-		LPCTSTR idOldFile = _T("id.txt");
-		if (PathFileExists(idOldFile))
+		LPCTSTR idFile = _T("id.txt");
+
+		if (PathFileExists(idFile))
 		{
-			DeleteFile(idOldFile);
+			DeleteFile(idFile);
 		}
 	}
 	else
 	{
-		return true;
+		return false;
 	}
 
 	return true;
@@ -812,7 +970,7 @@ bool UploadFile(HWND hwnd, LPCTSTR fileName)
 	if (hSession == NULL)
 	{
 		ErrorMessage(hwnd, _T("Cannot initiate connection"));
-		return FALSE;
+		return false;
 	}
 
 	// Full set requirements before
@@ -846,12 +1004,12 @@ bool UploadFile(HWND hwnd, LPCTSTR fileName)
 	{
 		// Success requiresは
 
-		DWORD resLen = 8;
-		TCHAR resCode[8];
+		DWORD nResponse = 8;
+		TCHAR response[8];
 
 		// state codeを 取得
-		HttpQueryInfo(hRequest, HTTP_QUERY_STATUS_CODE, resCode, &resLen, 0);
-		if (_ttoi(resCode) != 200)
+		HttpQueryInfo(hRequest, HTTP_QUERY_STATUS_CODE, response, &nResponse, 0);
+		if (_ttoi(response) != 200)
 		{
 			// upload 失敗 (status error)
 			ErrorMessage(hwnd, _T("Failed to upload (unexpected result code, under maintainance?)"));
@@ -861,45 +1019,39 @@ bool UploadFile(HWND hwnd, LPCTSTR fileName)
 			// Upload succeeded
 
 			// Get new id
-			DWORD idLen = 100;
-			TCHAR idUrl[100];
+			DWORD nId = 100;
+			TCHAR id[100];
 
-			memset(idUrl, 0, idLen * sizeof(TCHAR));	
-			_tcscpy_s(idUrl, _T("X-Gyazo-Id"));
+			_tcscpy_s(id, _T("X-Gyazo-Id"));
 
-			HttpQueryInfo(hRequest, HTTP_QUERY_CUSTOM, idUrl, &idLen, 0);
+			HttpQueryInfo(hRequest, HTTP_QUERY_CUSTOM, id, &nId, 0);
 			if (GetLastError() != ERROR_HTTP_HEADER_NOT_FOUND 
-				&& idLen != 0)
+				&& nId != 0)
 			{
 				// Save new id
-				SaveId(idUrl);
+				SaveId(id);
 			}
 
 			// Read URL results
-			DWORD len;
-			char resbuf[1024];
-			std::string result;
+			DWORD nUrl;
+			char url[1024];
+			tstring srcUrl;
+			tstring shareUrl = SHARE_PATH;
 
 			// Never so long , but once well
-			while (InternetReadFile(hRequest, (LPVOID) resbuf, 1024, &len) 
-				&& len != 0)
+			while (InternetReadFile(hRequest, (LPVOID) url, 1024, &nUrl) == TRUE
+				&& nUrl != 0)
 			{
-				result.append(resbuf, len);
+				srcUrl.append(url, url + nUrl);
 			}
 
-			std::string id = result.substr(result.find_last_of("/") + 1);
-
-			tostringstream urlStream;
-			urlStream << SHARE_PATH << id.c_str();
-
-			const tstring sUrl = urlStream.str();
-			LPCTSTR tUrl = sUrl.c_str();
+			shareUrl += srcUrl.substr(srcUrl.find_last_of(_T("/")) + 1);
 
 			// Copy the URL to the clipboard
-			SetClipBoardText(tUrl);
+			SetClipBoardText(shareUrl.c_str());
 
 			// Launch an URL
-			ExecUrl(tUrl); 
+			ExecUrl(shareUrl.c_str());
 
 			return true;
 		}
