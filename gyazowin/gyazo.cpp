@@ -195,7 +195,7 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance)
 	wc.hInstance		= hInstance;
 	wc.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
 	wc.hCursor			= LoadCursor(NULL, IDC_CROSS);	// + Cursor
-	wc.hbrBackground	= 0;
+	wc.hbrBackground	= (HBRUSH) GetStockObject(WHITE_BRUSH);
 	wc.lpszMenuName		= 0;
 	wc.lpszClassName	= szWindowCursorClass;
 
@@ -268,6 +268,8 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 		100, 100, 300, 300,
 		hWnd, NULL, hInst, NULL);
 
+	SetLayeredWindowAttributes(hCursorWnd, RGB(255, 0, 0), 100, LWA_COLORKEY|LWA_ALPHA);
+
 	return TRUE;
 }
 
@@ -307,7 +309,7 @@ int GetEncoderClsid(LPCWSTR format, CLSID* pClsid)
 void DrawRubberband(HDC hdc, LPRECT newRect, bool erase)
 {
 	static bool firstDraw = true;	// First does not perform to erase the previous band
-	static RECT clipRect;			// Band that was drawn last
+	//static RECT clipRect;			// Band that was drawn last
 
 	if (firstDraw)
 	{
@@ -325,7 +327,7 @@ void DrawRubberband(HDC hdc, LPRECT newRect, bool erase)
 	}
 
 	// Check coordinate
-	clipRect = *newRect;
+	RECT clipRect = *newRect;
 	if (clipRect.right < clipRect.left)
 	{
 		swap(clipRect.right, clipRect.left);
@@ -347,7 +349,6 @@ void DrawRubberband(HDC hdc, LPRECT newRect, bool erase)
 void DrawCoordinates(HDC hdc, LPRECT newRect, bool erase)
 {
 	static bool firstDraw = true;	// First does not perform to erase the previous band
-	static RECT coordRect;			// Band that was drawn last
 
 	if (firstDraw)
 	{
@@ -365,10 +366,10 @@ void DrawCoordinates(HDC hdc, LPRECT newRect, bool erase)
 	}
 
 	MoveWindow(hCursorWnd, 
-		coordRect.left, 
-		coordRect.top, 
-		coordRect.right - coordRect.left + 1, 
-		coordRect.bottom - coordRect.top + 1, 
+		newRect->left, 
+		newRect->top, 
+		100, 
+		100, 
 		TRUE);
 }
 
@@ -541,6 +542,12 @@ LRESULT CALLBACK CursorWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	{
 	case WM_ERASEBKGND:
 		{
+			const int offset = 10;
+
+			RECT winRect;
+			GetWindowRect(hWnd, &winRect);
+			SIZE cursorPos = { winRect.left - offset, winRect.top - offset };
+
 			HDC hdc = GetDC(hWnd);
 			HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
 			SelectObject(hdc, hBrush);
@@ -572,16 +579,12 @@ LRESULT CALLBACK CursorWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 
 			SIZE textPos;
 			TCHAR sText[100];
-			const int offset = 10;
-
-			int mouseX = LOWORD(lParam) + screenOffsetX;
-			int mouseY = HIWORD(lParam) + screenOffsetY;
 
 			// Draw mouse coordinates
-			_stprintf_s(sText, _T("%d:%d"), mouseX, mouseY);
+			_stprintf_s(sText, _T("%d:%d"), cursorPos.cx, cursorPos.cy);
 			size_t nText = _tcslen(sText);
-			textPos.cx = /*mouseX +*/ offset;
-			textPos.cy = /*mouseY +*/ offset;
+			textPos.cx = offset;
+			textPos.cy = offset;
 
 			DrawLabel(hdc, textPos, sText, nText);
 
@@ -637,18 +640,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (isClip)
 			{
 				// Set the new coordinate
-				clipRect.right	= LOWORD(lParam) + screenOffsetX;
-				clipRect.bottom	= HIWORD(lParam) + screenOffsetY;
+				clipRect.right	= mouseX;
+				clipRect.bottom	= mouseY;
 
 				DrawRubberband(hdc, &clipRect, false);
 			}
-			/*else
+			else
 			{
-				clipRect.right = 100;
-				clipRect.bottom = 100;
+				clipRect.left = mouseX + 10;
+				clipRect.top = mouseY + 10;
 				
 				DrawCoordinates(hdc, &clipRect, false);
-			}*/
+			}
 
 			ReleaseDC(NULL, hdc);
 		}
@@ -656,15 +659,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
 	case WM_LBUTTONDOWN:
-		// Clip start
-		isClip = true;
+		{
+			// Clip start
+			isClip = true;
 
-		// Set the initial position
-		clipRect.left	= LOWORD(lParam) + screenOffsetX;
-		clipRect.top	= HIWORD(lParam) + screenOffsetY;
+			// hide windows with mouse coordinates
+			HDC hdc = GetDC(NULL);
+			DrawCoordinates(hdc, &clipRect, true);
+			ReleaseDC(NULL, hdc);
 
-		// Capture the mouse
-		SetCapture(hWnd);
+			// Set the initial position
+			clipRect.left	= LOWORD(lParam) + screenOffsetX;
+			clipRect.top	= HIWORD(lParam) + screenOffsetY;
+
+			// Capture the mouse
+			SetCapture(hWnd);
+		}
 		break;
 
 	case WM_LBUTTONUP:
