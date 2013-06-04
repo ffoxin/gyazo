@@ -81,10 +81,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="gyazo.cpp" />
+    <ClCompile Include="gyazolib.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="gdiinit.h" />
+    <ClInclude Include="gyazolib.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
