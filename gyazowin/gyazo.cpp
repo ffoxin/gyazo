@@ -361,16 +361,16 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
 			SetBkMode(hdc, TRANSPARENT);
 
+			const int border = 5;
+
 			Gyazo::Size textSize, textPos;
 			TCHAR sText[100];
 			size_t nText;
-			const int border = 5;
 
 			// Draw top left coordinates (top left corner)
 			_stprintf_s(sText, _T("%d:%d"), winRect.left, winRect.top);
 			nText = _tcslen(sText);
-			textPos.cx = border;
-			textPos.cy = border;
+			textPos.Set(border, border);
 
 			DrawLabel(hdc, textPos, sText, nText);
 
@@ -378,8 +378,8 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			_stprintf_s(sText, _T("%d:%d"), winRect.right, winRect.bottom);
 			nText = _tcslen(sText);
 			GetTextExtentPoint(hdc, sText, nText, textSize);
-			textPos.cx = clipRect.cx - textSize.cx - border;
-			textPos.cy = clipRect.cy - textSize.cy - border;
+			textPos.Set(clipRect.cx - textSize.cx - border, 
+				clipRect.cy - textSize.cy - border);
 
 			DrawLabel(hdc, textPos, sText, nText);
 
@@ -387,8 +387,8 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			_stprintf_s(sText, _T("%d:%d"), clipRect.cx, clipRect.cy);
 			nText = _tcslen(sText);
 			GetTextExtentPoint(hdc, sText, nText, textSize);
-			textPos.cx = (clipRect.cx - textSize.cx) / 2;
-			textPos.cy = (clipRect.cy - textSize.cy) / 2;
+			textPos.Set((clipRect.cx - textSize.cx) / 2, 
+				(clipRect.cy - textSize.cy) / 2);
 
 			DrawLabel(hdc, textPos, sText, nText);
 
@@ -453,8 +453,7 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			_stprintf_s(sText, _T("%d:%d"), cursorPos.cx, cursorPos.cy);
 			size_t nText = _tcslen(sText);
 			GetTextExtentPoint(hdc, sText, nText, coordSize);
-			textPos.cx = 2;
-			textPos.cy = 0;
+			textPos.Set(2, 0);
 
 			DrawLabel(hdc, textPos, sText, nText);
 
@@ -480,7 +479,7 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 {
 	HDC hdc;
 
-	static bool isClip		= false;
+	static bool isClip = false;
 	static Gyazo::Rect clipRect;
 
 	switch (message)
@@ -502,8 +501,8 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
 	case WM_MOUSEMOVE:
 		{
-			cursorPos.cx = LOWORD(lParam) + screenOffsetX;
-			cursorPos.cy = HIWORD(lParam) + screenOffsetY;
+			cursorPos.Set(LOWORD(lParam) + screenOffsetX, 
+				HIWORD(lParam) + screenOffsetY);
 
 			hdc = GetDC(NULL);
 
@@ -519,10 +518,10 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			{
 				const Gyazo::Size offset(5, 5);
 
-				cursorRect.left = cursorPos.cx + offset.cx;
-				cursorRect.top = cursorPos.cy + offset.cy;
-				cursorRect.right = coordSize.cx + 4;
-				cursorRect.bottom = coordSize.cy;
+				cursorRect.Set(cursorPos.cx + offset.cx, 
+					cursorPos.cy + offset.cy, 
+					coordSize.cx + 4, 
+					coordSize.cy);
 
 				DrawCoordinates(hdc, cursorRect);
 				SendMessage(hCursorWnd, WM_ERASEBKGND, NULL, NULL);

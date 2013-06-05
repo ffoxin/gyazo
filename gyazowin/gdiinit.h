@@ -1,17 +1,18 @@
 #ifndef GDIINIT_H
 #define GDIINIT_H
 
+// System headers
 #include <gdiplus.h>
 using namespace Gdiplus;
 
-class GdiPlusInit
+class GdiScopeInit
 {
 public:
-	GdiPlusInit()
+	GdiScopeInit()
 	{
 		GdiplusStartup(&m_gdiplusToken, &m_gdiplusStartupInput, NULL);
 	}
-	~GdiPlusInit()
+	~GdiScopeInit()
 	{
 		GdiplusShutdown(m_gdiplusToken);
 	}

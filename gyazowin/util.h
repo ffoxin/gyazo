@@ -22,7 +22,7 @@ typedef std::wistringstream	tistringstream;
 
 typedef std::wofstream		tofstream;
 typedef std::wifstream		tifstream;
-#else
+#else // not UNICODE
 typedef std::string			tstring;
 
 typedef std::stringstream	tstringstream;
@@ -31,10 +31,10 @@ typedef std::istringstream	tistringstream;
 
 typedef std::ofstream		tofstream;
 typedef std::ifstream		tifstream;
-#endif
+#endif // UNICODE
 
 template<typename T>
-void swap(T& lr, T& rr)
+inline void swap(T& lr, T& rr)
 {
 	lr ^= rr ^= lr ^= rr;
 }
@@ -49,33 +49,45 @@ public:
 		Init(0, 0);
 	}
 
-	inline Size(const LONG& x, const LONG& y) :
+	inline Size(
+		const LONG& x, 
+		const LONG& y
+		) :
 		cx(size.cx), 
 		cy(size.cy)
 	{
 		Init(x, y);
 	}
 
-	inline Size(const Size& sz) :
+	inline Size(
+		const Size& sz
+		) :
 		cx(size.cx), 
 		cy(size.cy)
 	{
 		Init(sz.cx, sz.cy);
 	}
 
-	inline Size(const SIZE& sz) :
+	inline Size(
+		const SIZE& sz
+		) :
 		cx(size.cx), 
 		cy(size.cy)
 	{
 		Init(sz.cx, sz.cy);
 	}
 
-	inline void Set(const LONG& x, const LONG& y)
+	inline void Set(
+		const LONG& x, 
+		const LONG& y
+		)
 	{
 		Init(x, y);
 	}
 
-	inline Size& operator=(const Size& sz)
+	inline Size& operator=(
+		const Size& sz
+		)
 	{
 		if (this != &sz)
 		{
@@ -85,7 +97,9 @@ public:
 		return *this;
 	}
 
-	inline Size& operator=(const SIZE& sz)
+	inline Size& operator=(
+		const SIZE& sz
+		)
 	{
 		Init(sz.cx, sz.cy);
 
@@ -108,7 +122,10 @@ public:
 	LONG&	cy;
 
 private:
-	inline void Init(const LONG& x, const LONG& y)
+	inline void Init(
+		const LONG& x, 
+		const LONG& y
+		)
 	{
 		size.cx = x;
 		size.cy = y;
@@ -226,6 +243,6 @@ private:
 	}
 };
 
-}
+} // namespace Gyazo
 
 #endif // UTIL_H

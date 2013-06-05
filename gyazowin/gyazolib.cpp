@@ -139,7 +139,7 @@ bool ImageToPng(Image* image, LPCTSTR fileName)
 bool ConvertPng(LPCTSTR destFile, LPCTSTR srcFile)
 {
 	// Initialization GDI+
-	const GdiPlusInit& gpi = GdiPlusInit();
+	const GdiScopeInit& gpi = GdiScopeInit();
 
 	Image* image = new Image(srcFile, 0);
 
@@ -155,7 +155,7 @@ bool ConvertPng(LPCTSTR destFile, LPCTSTR srcFile)
 bool SavePng(LPCTSTR fileName, HBITMAP hBmp)
 {
 	// Initialization GDI+
-	const GdiPlusInit& gpi = GdiPlusInit();
+	const GdiScopeInit& gpi = GdiScopeInit();
 
 	Bitmap* bitmap = new Bitmap(hBmp, NULL);
 
