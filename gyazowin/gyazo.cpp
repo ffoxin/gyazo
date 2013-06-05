@@ -26,12 +26,12 @@ LPCTSTR szWindowCursorClass	= _T("GYAZOWINC");	// Cursor window class name
 HINSTANCE hInstance;				// Application instance
 HWND hClipWnd;
 HWND hCursorWnd;
-Gyazo::Size coordSize;
-Gyazo::Rect cursorRect;
-Gyazo::Size cursorPos;
+Gyazo::Rect cursorWinRect;			// coord window rect
+Gyazo::Size cursorTextSize;			// coord text size
+Gyazo::Size cursorPos;				// mouse cursor position
 
-int screenOffsetX, screenOffsetY;	// virtual screen offset
-int screenWidth, screenHeight;		// virtual screen size
+Gyazo::Size screenOffset;			// virtual screen offset
+Gyazo::Size screenSize;				// virtual screen size
 
 // Declarations
 ATOM				RegisterGyazoClass(HINSTANCE);
@@ -119,6 +119,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 ATOM RegisterGyazoClass(HINSTANCE hInstance)
 {
 	WNDCLASS wc;
+	ATOM result;
 
 	// Main window
 	wc.style			= 0;							// Do not send a WM_PAINT
@@ -132,9 +133,13 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance)
 	wc.lpszMenuName		= 0;
 	wc.lpszClassName	= szWindowMainClass;
 
-	RegisterClass(&wc);
+	result = RegisterClass(&wc);
+	if (result == 0)
+	{
+		return 0;
+	}
 
-	// Layer window
+	// Clip window
 	wc.style			= CS_HREDRAW | CS_VREDRAW;
 	wc.lpfnWndProc		= WndProcClip;
 	wc.cbClsExtra		= 0;
@@ -146,7 +151,11 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance)
 	wc.lpszMenuName		= 0;
 	wc.lpszClassName	= szWindowLayerClass;
 
-	RegisterClass(&wc);
+	result = RegisterClass(&wc);
+	if (result == 0)
+	{
+		return 0;
+	}
 
 	// Cursor window
 	wc.style			= CS_HREDRAW | CS_VREDRAW;
@@ -160,7 +169,13 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance)
 	wc.lpszMenuName		= 0;
 	wc.lpszClassName	= szWindowCursorClass;
 
-	return RegisterClass(&wc);
+	result = RegisterClass(&wc);
+	if (result == 0)
+	{
+		return 0;
+	}
+
+	return result;
 }
 
 // (I covered with a window full screen) initialization of instance
@@ -170,10 +185,8 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 	hInstance = hInst; // I will store instances processing in a global variable .
 
 	// It covers the entire virtual screen
-	screenOffsetX = GetSystemMetrics(SM_XVIRTUALSCREEN);
-	screenOffsetY = GetSystemMetrics(SM_YVIRTUALSCREEN);
-	screenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-	screenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+	screenOffset.Set(GetSystemMetrics(SM_XVIRTUALSCREEN), GetSystemMetrics(SM_YVIRTUALSCREEN));
+	screenSize.Set(GetSystemMetrics(SM_CXVIRTUALSCREEN), GetSystemMetrics(SM_CYVIRTUALSCREEN));
 
 	// Completely ni shi taウィthrough clothウをmake ru nn
 	hWnd = CreateWindowEx(
@@ -193,7 +206,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 	}
 
 	// I cover the entire screen
-	MoveWindow(hWnd, screenOffsetX, screenOffsetY, screenWidth, screenHeight, FALSE);
+	MoveWindow(hWnd, screenOffset.cx, screenOffset.cy, screenSize.cx, screenSize.cy, FALSE);
 
 	// (I troubled and is combed SW_MAXIMIZE) ignore the nCmdShow
 	ShowWindow(hWnd, SW_SHOW);
@@ -291,11 +304,23 @@ void DrawCoordinates(HDC hdc, LPRECT newRect)
 		return;
 	}
 	
+	Gyazo::Rect coordRect = *newRect;
+	coordRect.right++;
+	coordRect.bottom++;
+	if (coordRect.left + coordRect.right > screenSize.cx)
+	{
+		coordRect.left = screenSize.cx - coordRect.right;
+	}
+	if (coordRect.top + coordRect.bottom > screenSize.cy)
+	{
+		coordRect.top = screenSize.cy - coordRect.bottom;
+	}
+
 	MoveWindow(hCursorWnd, 
-		newRect->left, 
-		newRect->top, 
-		newRect->right + 1, 
-		newRect->bottom + 1, 
+		coordRect.left, 
+		coordRect.top, 
+		coordRect.right, 
+		coordRect.bottom, 
 		TRUE);
 }
 
@@ -421,7 +446,7 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			SelectObject(hdc, hBrush);
 			HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
 			SelectObject(hdc, hPen);
-			Rectangle(hdc, 0, 0, coordSize.cx + 4, coordSize.cy);
+			Rectangle(hdc, 0, 0, cursorTextSize.cx + 4, cursorTextSize.cy);
 
 			// The output size of the rectangle
 			int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
@@ -452,7 +477,7 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			// Draw mouse coordinates
 			_stprintf_s(sText, _T("%d:%d"), cursorPos.cx, cursorPos.cy);
 			size_t nText = _tcslen(sText);
-			GetTextExtentPoint(hdc, sText, nText, coordSize);
+			GetTextExtentPoint(hdc, sText, nText, cursorTextSize);
 			textPos.Set(2, 0);
 
 			DrawLabel(hdc, textPos, sText, nText);
@@ -501,8 +526,9 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
 	case WM_MOUSEMOVE:
 		{
-			cursorPos.Set(LOWORD(lParam) + screenOffsetX, 
-				HIWORD(lParam) + screenOffsetY);
+			cursorPos.Set(
+				LOWORD(lParam) + screenOffset.cx, 
+				HIWORD(lParam) + screenOffset.cy);
 
 			hdc = GetDC(NULL);
 
@@ -518,12 +544,13 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			{
 				const Gyazo::Size offset(5, 5);
 
-				cursorRect.Set(cursorPos.cx + offset.cx, 
+				cursorWinRect.Set(
+					cursorPos.cx + offset.cx, 
 					cursorPos.cy + offset.cy, 
-					coordSize.cx + 4, 
-					coordSize.cy);
+					cursorTextSize.cx + 4, 
+					cursorTextSize.cy);
 
-				DrawCoordinates(hdc, cursorRect);
+				DrawCoordinates(hdc, cursorWinRect);
 				SendMessage(hCursorWnd, WM_ERASEBKGND, NULL, NULL);
 			}
 
@@ -547,8 +574,8 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			ReleaseDC(NULL, hdc);
 
 			// Set the initial position
-			clipRect.left	= LOWORD(lParam) + screenOffsetX;
-			clipRect.top	= HIWORD(lParam) + screenOffsetY;
+			clipRect.left	= LOWORD(lParam) + screenOffset.cx;
+			clipRect.top	= HIWORD(lParam) + screenOffset.cy;
 
 			// Capture the mouse
 			SetCapture(hWnd);
@@ -564,8 +591,8 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			ReleaseCapture();
 
 			// Set the new coordinate
-			clipRect.right	= LOWORD(lParam) + screenOffsetX;
-			clipRect.bottom	= HIWORD(lParam) + screenOffsetY;
+			clipRect.right	= LOWORD(lParam) + screenOffset.cx;
+			clipRect.bottom	= HIWORD(lParam) + screenOffset.cy;
 
 			// Screen ni direct drawing,っte -shaped
 			HDC hdc = GetDC(NULL);
@@ -584,10 +611,11 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			}
 
 			// Image capture
-			int iWidth	= clipRect.right - clipRect.left + 1;
-			int iHeight	= clipRect.bottom - clipRect.top + 1;
+			Gyazo::Size imageSize(
+				clipRect.right - clipRect.left + 1, 
+				clipRect.bottom - clipRect.top + 1);
 
-			if (iWidth == 0 || iHeight == 0)
+			if (imageSize.cx == 0 || imageSize.cy == 0)
 			{
 				// It is not already in the image , it is not nothing
 				ReleaseDC(NULL, hdc);
@@ -596,14 +624,14 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			}
 
 			// Create a bitmap buffer
-			HBITMAP	newBMP	= CreateCompatibleBitmap(hdc, iWidth, iHeight);
+			HBITMAP	newBMP	= CreateCompatibleBitmap(hdc, imageSize.cx, imageSize.cy);
 			HDC		newDC	= CreateCompatibleDC(hdc);
 
 			// Associated
 			SelectObject(newDC, newBMP);
 
 			// Portraitをobtain
-			BitBlt(newDC, 0, 0, iWidth, iHeight, 
+			BitBlt(newDC, 0, 0, imageSize.cx, imageSize.cy, 
 				hdc, clipRect.left, clipRect.top, SRCCOPY);
 
 			// I hide the window !
