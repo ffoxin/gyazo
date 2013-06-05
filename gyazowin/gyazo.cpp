@@ -223,7 +223,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 #endif
 		,
 		szWindowLayerClass, NULL, WS_POPUP,
-		100, 100, 300, 300,
+		0, 0, 0, 0,
 		hWnd, NULL, hInst, NULL);
 
 	SetLayeredWindowAttributes(hClipWnd, RGB(255, 0, 0), 100, LWA_COLORKEY | LWA_ALPHA);
@@ -235,7 +235,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 #endif
 		,
 		szWindowCursorClass, NULL, WS_POPUP,
-		100, 100, 300, 300,
+		0, 0, 0, 0,
 		hWnd, NULL, hInst, NULL);
 
 	SetLayeredWindowAttributes(hCursorWnd, RGB(255, 0, 0), 100, LWA_COLORKEY | LWA_ALPHA);
@@ -305,8 +305,6 @@ void DrawCoordinates(HDC hdc, LPRECT newRect)
 	}
 	
 	Gyazo::Rect coordRect = *newRect;
-	coordRect.right++;
-	coordRect.bottom++;
 	if (coordRect.left + coordRect.right > screenSize.cx)
 	{
 		coordRect.left = screenSize.cx - coordRect.right;
