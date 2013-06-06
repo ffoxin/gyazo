@@ -7,12 +7,10 @@
 
 // Project headers
 #include "gdiinit.h"
+#include "stringconstants.h"
 
 namespace Gyazo
 {
-
-// Constants
-LPCTSTR szTitle = _T("Gyazo");		// Text in the title bar
 
 // I get the CLSID of the Encoder corresponding to the specified format
 // Cited from MSDN Library: Retrieving the Class Identifier for an Encoder
@@ -54,7 +52,7 @@ bool IsPng(LPCTSTR fileName)
 
 	FILE *fp = NULL;
 
-	if (_tfopen_s(&fp, fileName, _T("rb")) != 0
+	if (_tfopen_s(&fp, fileName, GYAZO_READ_BINARY) != 0
 		|| fread(readHead, 1, 8, fp) != 8)
 	{
 		// Can not read the file
@@ -77,7 +75,7 @@ void ExecUrl(LPCTSTR url)
 	// Run the open command
 	SHELLEXECUTEINFO lsw = {};
 	lsw.cbSize = sizeof(SHELLEXECUTEINFO);
-	lsw.lpVerb = _T("open");
+	lsw.lpVerb = GYAZO_URL_OPEN;
 	lsw.lpFile = url;
 
 	ShellExecuteEx(&lsw);
@@ -170,15 +168,6 @@ bool SavePng(LPCTSTR fileName, HBITMAP hBmp)
 // I want to upload a PNG file .
 bool UploadFile(LPCTSTR fileName)
 {
-	LPCTSTR UPLOAD_SERVER	= _T("gyazo.com");
-	LPCTSTR UPLOAD_PATH		= _T("/upload.cgi");
-	LPCTSTR	SHARE_PATH		= _T("http://ffoxin.github.io/gyazo.htm?id=");
-
-	const char*	sBoundary = "----BOUNDARYBOUNDARY----";		// boundary
-	const char	sCrLf[] = { 0xd, 0xa, 0x0 };				// Diverted (CR + LF)
-	LPCTSTR szHeader = 
-		_T("Content-type: multipart/form-data; boundary=----BOUNDARYBOUNDARY----");
-
 	std::ostringstream buf;	// Outgoing messages
 
 	// Get an ID
@@ -187,20 +176,20 @@ bool UploadFile(LPCTSTR fileName)
 
 	// Configuring Message
 	// -- "id" part
-	buf << "--";
+	buf << sDivider;
 	buf << sBoundary;
 	buf << sCrLf;
-	buf << "content-disposition: form-data; name=\"id\"";
+	buf << sContentId;
 	buf << sCrLf;
 	buf << sCrLf;
 	buf << idStr;
 	buf << sCrLf;
 
 	// - " ImageData " part
-	buf << "--";
+	buf << sDivider;
 	buf << sBoundary;
 	buf << sCrLf;
-	buf << "content-disposition: form-data; name=\"imagedata\"; filename=\"gyazo.com\"";
+	buf << sContentData;
 	buf << sCrLf;
 	//buf << "Content-type: image/png";	// 一応
 	//buf << sCrLf;
@@ -212,7 +201,7 @@ bool UploadFile(LPCTSTR fileName)
 	if (png.fail())
 	{
 		png.close();
-		ErrorMessage(_T("PNG open failed"));
+		ErrorMessage(ERROR_OPEN_PNG);
 		return false;
 	}
 	buf << png.rdbuf();		// read all & append to buffer
@@ -220,9 +209,9 @@ bool UploadFile(LPCTSTR fileName)
 
 	// Last
 	buf << sCrLf;
-	buf << "--";
+	buf << sDivider;
 	buf << sBoundary;
-	buf << "--";
+	buf << sDivider;
 	buf << sCrLf;
 
 	// Message completion
@@ -237,45 +226,58 @@ bool UploadFile(LPCTSTR fileName)
 		0);
 	if (hSession == NULL)
 	{
-		ErrorMessage(_T("Cannot configure wininet"));
+		ErrorMessage(ERROR_WININET_CONFIGURE);
 		return false;
 	}
 
 	// Access point
-	HINTERNET hConnection = InternetConnect(hSession, 
-		UPLOAD_SERVER, INTERNET_DEFAULT_HTTP_PORT,
-		NULL, NULL, INTERNET_SERVICE_HTTP, 0, NULL);
+	HINTERNET hConnection = InternetConnect(
+		hSession, 
+		GYAZO_UPLOAD_SERVER, 
+		INTERNET_DEFAULT_HTTP_PORT,
+		NULL, 
+		NULL, 
+		INTERNET_SERVICE_HTTP, 
+		0, 
+		NULL);
 	if (hSession == NULL)
 	{
-		ErrorMessage(_T("Cannot initiate connection"));
+		ErrorMessage(ERROR_CONNECTION_INIT);
 		return false;
 	}
 
 	// Full set requirements before
-	HINTERNET hRequest = HttpOpenRequest(hConnection,
-		_T("POST"), UPLOAD_PATH, NULL,
-		NULL, NULL, INTERNET_FLAG_DONT_CACHE | INTERNET_FLAG_RELOAD, NULL);
+	HINTERNET hRequest = HttpOpenRequest(
+		hConnection,
+		GYAZO_POST, 
+		GYAZO_UPLOAD_PATH, 
+		NULL, 
+		NULL, 
+		NULL, 
+		INTERNET_FLAG_DONT_CACHE | INTERNET_FLAG_RELOAD, 
+		NULL);
 	if (hRequest == NULL)
 	{
-		ErrorMessage(_T("Cannot compose post request"));
+		ErrorMessage(ERROR_COMPOSE_POST);
 		return false;
 	}
 
 	// User Agentを 指定
-	LPCTSTR userAgent = _T("User-Agent: Gyazowin/1.0\r\n");
 	BOOL bResult = HttpAddRequestHeaders(
-		hRequest, userAgent, _tcslen(userAgent), 
+		hRequest, 
+		GYAZO_USER_AGENT, 
+		_tcslen(GYAZO_USER_AGENT), 
 		HTTP_ADDREQ_FLAG_ADD | HTTP_ADDREQ_FLAG_REPLACE);
 	if (bResult == FALSE)
 	{
-		ErrorMessage(_T("Cannot set user agent"));
+		ErrorMessage(ERROR_SET_USER_AGENT);
 		return false;
 	}
 
 	// Requirementsをmessenger
 	bResult = HttpSendRequest(hRequest,
-		szHeader,
-		lstrlen(szHeader),
+		GYAZO_HEADER,
+		lstrlen(GYAZO_HEADER),
 		(LPVOID)msg.c_str(),
 		(DWORD) msg.length());
 	if (bResult == TRUE)
@@ -286,11 +288,16 @@ bool UploadFile(LPCTSTR fileName)
 		TCHAR response[8];
 
 		// state codeを 取得
-		HttpQueryInfo(hRequest, HTTP_QUERY_STATUS_CODE, response, &nResponse, 0);
+		HttpQueryInfo(
+			hRequest, 
+			HTTP_QUERY_STATUS_CODE, 
+			response, 
+			&nResponse, 
+			0);
 		if (_ttoi(response) != 200)
 		{
 			// upload 失敗 (status error)
-			ErrorMessage(_T("Failed to upload (unexpected result code, under maintainance?)"));
+			ErrorMessage(ERROR_UPLOAD_IMAGE);
 		}
 		else
 		{
@@ -300,9 +307,14 @@ bool UploadFile(LPCTSTR fileName)
 			DWORD nId = 100;
 			TCHAR id[100];
 
-			_tcscpy_s(id, _T("X-Gyazo-Id"));
+			_tcscpy_s(id, GYAZO_ID);
 
-			HttpQueryInfo(hRequest, HTTP_QUERY_CUSTOM, id, &nId, 0);
+			HttpQueryInfo(
+				hRequest, 
+				HTTP_QUERY_CUSTOM, 
+				id, 
+				&nId, 
+				0);
 			if (GetLastError() != ERROR_HTTP_HEADER_NOT_FOUND 
 				&& nId != 0)
 			{
@@ -314,7 +326,7 @@ bool UploadFile(LPCTSTR fileName)
 			DWORD nUrl;
 			char url[1024];
 			tstring srcUrl;
-			tstring shareUrl = SHARE_PATH;
+			tstring shareUrl = GYAZO_SHARE_PATH;
 
 			// Never so long , but once well
 			while (InternetReadFile(hRequest, (LPVOID) url, 1024, &nUrl) == TRUE
@@ -323,7 +335,7 @@ bool UploadFile(LPCTSTR fileName)
 				srcUrl.append(url, url + nUrl);
 			}
 
-			shareUrl += srcUrl.substr(srcUrl.find_last_of(_T("/")) + 1);
+			shareUrl += srcUrl.substr(srcUrl.find_last_of(GYAZO_URL_DIVIDER) + 1);
 
 			// Copy the URL to the clipboard
 			SetClipBoardText(shareUrl.c_str());
@@ -337,7 +349,7 @@ bool UploadFile(LPCTSTR fileName)
 	else
 	{
 		// Upload failed
-		ErrorMessage(_T("Failed to upload"));
+		ErrorMessage(ERROR_UPLOAD_FAILED);
 		return false;
 	}
 
@@ -361,7 +373,7 @@ tstring GetId()
 	else
 	{
 		// (Compatibility with older versions) to read the ID from the same directory
-		LPCTSTR idFile = _T("id.txt");
+		LPCTSTR idFile = GYAZO_ID_FILENAME;
 
 		ifs.close();
 		ifs.open(idFile);
@@ -389,7 +401,7 @@ bool SaveId(LPCTSTR sId)
 		ofs.close();
 
 		// Delete the old configuration file
-		LPCTSTR idFile = _T("id.txt");
+		LPCTSTR idFile = GYAZO_ID_FILENAME;
 
 		if (PathFileExists(idFile))
 		{
@@ -415,8 +427,12 @@ LPCTSTR GetIdDirPath()
 
 	if (*idDir == TCHAR(0))
 	{
-		SHGetSpecialFolderPath(NULL, idDir, CSIDL_APPDATA, FALSE);
-		_tcscat_s(idDir, _T("\\Gyazo"));
+		SHGetSpecialFolderPath(
+			NULL, 
+			idDir, 
+			CSIDL_APPDATA, 
+			FALSE);
+		_tcscat_s(idDir, GYAZO_DIRNAME);
 	}
 
 	return idDir;
@@ -429,7 +445,7 @@ LPCTSTR GetIdFilePath()
 	if (*idFile == TCHAR(0))
 	{
 		_tcscpy_s(idFile, GetIdDirPath());
-		_tcscat_s(idFile, _T("\\id.txt"));
+		_tcscat_s(idFile, GYAZO_ID_FILEPATH);
 	}
 
 	return idFile;

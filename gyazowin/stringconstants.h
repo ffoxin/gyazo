@@ -1,0 +1,51 @@
+#ifndef STRINGCONSTANTS_H
+#define STRINGCONSTANTS_H
+
+#include "util.h"
+
+namespace Gyazo
+{
+
+extern LPCTSTR szTitle;
+extern LPCTSTR szWindowMainClass;
+extern LPCTSTR szWindowLayerClass;
+extern LPCTSTR szWindowCursorClass;
+extern LPCTSTR szTitle;
+
+extern LPCTSTR GYAZO_PREFIX;
+extern LPCTSTR GYAZO_FONT_NAME;
+extern LPCTSTR GYAZO_POINT_FORMAT;
+extern LPCTSTR GYAZO_READ_BINARY;
+extern LPCTSTR GYAZO_URL_OPEN;
+extern LPCTSTR GYAZO_UPLOAD_SERVER;
+extern LPCTSTR GYAZO_UPLOAD_PATH;
+extern LPCTSTR GYAZO_SHARE_PATH;
+extern LPCTSTR GYAZO_USER_AGENT;
+extern LPCTSTR GYAZO_ID;
+extern LPCTSTR GYAZO_HEADER;
+extern LPCTSTR GYAZO_ID_FILENAME;
+extern LPCTSTR GYAZO_DIRNAME;
+extern LPCTSTR GYAZO_ID_FILEPATH;
+extern LPCTSTR GYAZO_POST;
+extern LPCTSTR GYAZO_URL_DIVIDER;
+
+
+extern LPCTSTR ERROR_CONVERT_IMAGE;
+extern LPCTSTR ERROR_OPEN_PNG;
+extern LPCTSTR ERROR_WININET_CONFIGURE;
+extern LPCTSTR ERROR_CONNECTION_INIT;
+extern LPCTSTR ERROR_COMPOSE_POST;
+extern LPCTSTR ERROR_SET_USER_AGENT;
+extern LPCTSTR ERROR_UPLOAD_IMAGE;
+extern LPCTSTR ERROR_UPLOAD_FAILED;
+
+extern LPCSTR sBoundary;
+extern LPCSTR sDivider;
+extern LPCSTR sContentId;
+extern LPCSTR sContentData;
+
+extern const char sCrLf[];
+
+} // namespace Gyazo
+
+#endif // STRINGCONSTANTS_H

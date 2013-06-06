@@ -13,21 +13,16 @@
 // Project headers
 #include "gyazolib.h"
 #include "resource.h"
+#include "stringconstants.h"
 #include "util.h"
 using namespace Gyazo;
-
-// Constants
-LPCTSTR szTitle				= _T("Gyazo");		// Text in the title bar
-LPCTSTR szWindowMainClass	= _T("GYAZOWINM");	// Main window class name
-LPCTSTR szWindowLayerClass	= _T("GYAZOWINL");	// Layer window class name
-LPCTSTR szWindowCursorClass	= _T("GYAZOWINC");	// Cursor window class name
 
 // Globals
 HINSTANCE hInstance;				// Application instance
 HWND hClipWnd;
 HWND hCursorWnd;
-Gyazo::Rect cursorWinRect;			// coord window rect
-Gyazo::Size cursorTextSize;			// coord text size
+Gyazo::Rect cursorWinRect;			// coordinate window rect
+Gyazo::Size cursorTextSize;			// coordinate text size
 Gyazo::Size cursorPos;				// mouse cursor position
 
 Gyazo::Size screenOffset;			// virtual screen offset
@@ -79,7 +74,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			// Convert to PNG format
 			TCHAR tmpDir[MAX_PATH], tmpFile[MAX_PATH];
 			GetTempPath(MAX_PATH, tmpDir);
-			GetTempFileName(tmpDir, _T("gya"), 0, tmpFile);
+			GetTempFileName(tmpDir, GYAZO_PREFIX, 0, tmpFile);
 
 			if (ConvertPng(tmpFile, fileArg))
 			{
@@ -89,7 +84,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			else
 			{
 				// Can not be converted into PNG
-				ErrorMessage(_T("Cannot convert this image"));
+				ErrorMessage(ERROR_CONVERT_IMAGE);
 			}
 			DeleteFile(tmpFile);
 		}
@@ -377,7 +372,7 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 				CLIP_DEFAULT_PRECIS,// Clipping accuracy
 				PROOF_QUALITY,		// Output Quality
 				FIXED_PITCH | FF_MODERN, // Family pitch
-				_T("Tahoma")		// Face name
+				GYAZO_FONT_NAME		// Face name
 				);
 
 			SelectObject(hdc, hFont);
@@ -391,14 +386,14 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			size_t nText;
 
 			// Draw top left coordinates (top left corner)
-			_stprintf_s(sText, _T("%d:%d"), winRect.left, winRect.top);
+			_stprintf_s(sText, GYAZO_POINT_FORMAT, winRect.left, winRect.top);
 			nText = _tcslen(sText);
 			textPos.Set(border, border);
 
 			DrawLabel(hdc, textPos, sText, nText);
 
 			// Draw bottom right coordinates (bottom right corner)
-			_stprintf_s(sText, _T("%d:%d"), winRect.right, winRect.bottom);
+			_stprintf_s(sText, GYAZO_POINT_FORMAT, winRect.right, winRect.bottom);
 			nText = _tcslen(sText);
 			GetTextExtentPoint(hdc, sText, nText, textSize);
 			textPos.Set(clipRect.cx - textSize.cx - border, 
@@ -407,7 +402,7 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			DrawLabel(hdc, textPos, sText, nText);
 
 			// Draw crop size (center)
-			_stprintf_s(sText, _T("%d:%d"), clipRect.cx, clipRect.cy);
+			_stprintf_s(sText, GYAZO_POINT_FORMAT, clipRect.cx, clipRect.cy);
 			nText = _tcslen(sText);
 			GetTextExtentPoint(hdc, sText, nText, textSize);
 			textPos.Set((clipRect.cx - textSize.cx) / 2, 
@@ -462,7 +457,7 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 				CLIP_DEFAULT_PRECIS,// Clipping accuracy
 				PROOF_QUALITY,		// Output Quality
 				FIXED_PITCH | FF_MODERN, // Family pitch
-				_T("Tahoma")		// Face name
+				GYAZO_FONT_NAME		// Face name
 				);
 
 			SelectObject(hdc, hFont);
@@ -473,7 +468,7 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			TCHAR sText[100];
 
 			// Draw mouse coordinates
-			_stprintf_s(sText, _T("%d:%d"), cursorPos.cx, cursorPos.cy);
+			_stprintf_s(sText, GYAZO_POINT_FORMAT, cursorPos.cx, cursorPos.cy);
 			size_t nText = _tcslen(sText);
 			GetTextExtentPoint(hdc, sText, nText, cursorTextSize);
 			textPos.Set(2, 0);
@@ -638,7 +633,7 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			// The determination of the temporary file name
 			TCHAR tmpDir[MAX_PATH], tmpFile[MAX_PATH];
 			GetTempPath(MAX_PATH, tmpDir);
-			GetTempFileName(tmpDir, _T("gya"), 0, tmpFile);
+			GetTempFileName(tmpDir, GYAZO_PREFIX, 0, tmpFile);
 
 			if (SavePng(tmpFile, newBMP))
 			{
@@ -647,7 +642,7 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			else
 			{
 				// PNG save failed
-				ErrorMessage(_T("Cannot save png image"));
+				ErrorMessage(ERROR_CONVERT_IMAGE);
 			}
 
 			// Clean up

@@ -27,6 +27,9 @@
     <ClInclude Include="gyazolib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="stringconstants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="icon1.ico">
@@ -41,6 +44,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="gyazolib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stringconstants.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
