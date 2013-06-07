@@ -11,18 +11,22 @@
 #include <tchar.h>
 
 // Project headers
+#include "font.h"
 #include "gyazolib.h"
 #include "resource.h"
 #include "stringconstants.h"
 #include "util.h"
 using namespace Gyazo;
 
+const Gyazo::Size cursorWinOffset(5, 5);
+const Gyazo::Size clipWinTextBorder(5, 5);
+
 // Globals
 HINSTANCE hInstance;				// Application instance
 HWND hClipWnd;
 HWND hCursorWnd;
-Gyazo::Rect cursorWinRect;			// coordinate window rect
-Gyazo::Size cursorTextSize;			// coordinate text size
+Gyazo::Rect cursorWinRect;			// mouse coordinates window rect
+Gyazo::Size cursorTextSize;			// mouse coordinates text size
 Gyazo::Size cursorPos;				// mouse cursor position
 
 Gyazo::Size screenOffset;			// virtual screen offset
@@ -358,28 +362,9 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
 			// The output size of the rectangle
 			int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-			HFONT hFont = CreateFont(
-				(-1) * fontHeight,	// Font height
-				0,					// Text parcels
-				0,					// Angle of text
-				0,					// Angle of the x-axis and the baseline
-				FW_REGULAR,			// The font weight (thickness)
-				FALSE,				// Italic
-				FALSE,				// Underline
-				FALSE,				// Strike through
-				ANSI_CHARSET,		// Character set
-				OUT_DEFAULT_PRECIS,	// Output Accuracy
-				CLIP_DEFAULT_PRECIS,// Clipping accuracy
-				PROOF_QUALITY,		// Output Quality
-				FIXED_PITCH | FF_MODERN, // Family pitch
-				GYAZO_FONT_NAME		// Face name
-				);
-
-			SelectObject(hdc, hFont);
+			SelectObject(hdc, Gyazo::Font::GetFont(fontHeight));
 
 			SetBkMode(hdc, TRANSPARENT);
-
-			const int border = 5;
 
 			Gyazo::Size textSize, textPos;
 			TCHAR sText[100];
@@ -388,7 +373,7 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			// Draw top left coordinates (top left corner)
 			_stprintf_s(sText, GYAZO_POINT_FORMAT, winRect.left, winRect.top);
 			nText = _tcslen(sText);
-			textPos.Set(border, border);
+			textPos.Set(clipWinTextBorder.cx, clipWinTextBorder.cy);
 
 			DrawLabel(hdc, textPos, sText, nText);
 
@@ -396,8 +381,8 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			_stprintf_s(sText, GYAZO_POINT_FORMAT, winRect.right, winRect.bottom);
 			nText = _tcslen(sText);
 			GetTextExtentPoint(hdc, sText, nText, textSize);
-			textPos.Set(clipRect.cx - textSize.cx - border, 
-				clipRect.cy - textSize.cy - border);
+			textPos.Set(clipRect.cx - textSize.cx - clipWinTextBorder.cx, 
+				clipRect.cy - textSize.cy - clipWinTextBorder.cy);
 
 			DrawLabel(hdc, textPos, sText, nText);
 
@@ -413,7 +398,7 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			// Release resources
 			DeleteObject(hPen);
 			DeleteObject(hBrush);
-			DeleteObject(hFont);
+			Gyazo::Font::Release();
 			ReleaseDC(hWnd, hdc);
 
 			return TRUE;
@@ -443,24 +428,7 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 
 			// The output size of the rectangle
 			int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-			HFONT hFont = CreateFont(
-				(-1) * fontHeight,	// Font height
-				0,					// Text parcels
-				0,					// Angle of text
-				0,					// Angle of the x-axis and the baseline
-				FW_REGULAR,			// The font weight (thickness)
-				FALSE,				// Italic
-				FALSE,				// Underline
-				FALSE,				// Strike through
-				ANSI_CHARSET,		// Character set
-				OUT_DEFAULT_PRECIS,	// Output Accuracy
-				CLIP_DEFAULT_PRECIS,// Clipping accuracy
-				PROOF_QUALITY,		// Output Quality
-				FIXED_PITCH | FF_MODERN, // Family pitch
-				GYAZO_FONT_NAME		// Face name
-				);
-
-			SelectObject(hdc, hFont);
+			SelectObject(hdc, Gyazo::Font::GetFont(fontHeight));
 
 			SetBkMode(hdc, TRANSPARENT);
 
@@ -478,7 +446,7 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			// Release resources
 			DeleteObject(hPen);
 			DeleteObject(hBrush);
-			DeleteObject(hFont);
+			Gyazo::Font::Release();
 			ReleaseDC(hWnd, hdc);
 
 			return TRUE;
@@ -535,11 +503,9 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			}
 			else
 			{
-				const Gyazo::Size offset(5, 5);
-
 				cursorWinRect.Set(
-					cursorPos.cx + offset.cx, 
-					cursorPos.cy + offset.cy, 
+					cursorPos.cx + cursorWinOffset.cx, 
+					cursorPos.cy + cursorWinOffset.cy, 
 					cursorTextSize.cx + 4, 
 					cursorTextSize.cy);
 
