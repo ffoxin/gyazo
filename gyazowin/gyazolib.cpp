@@ -25,7 +25,6 @@ int GetEncoderClsid(LPCWSTR format, CLSID* pClsid)
 		return -1;
 	}
 
-	//ImageCodecInfo* pImageCodecInfo = new ImageCodecInfo[num];
 	ImageCodecInfo* pImageCodecInfo = reinterpret_cast<ImageCodecInfo*>(new char[size]);
 
 	GetImageEncoders(num, size, pImageCodecInfo);
@@ -69,10 +68,9 @@ bool IsPng(LPCTSTR fileName)
 	return true;
 }
 
-// I open a browser (char *) URL that is specified
+// Open specified URL in browser
 void ExecUrl(LPCTSTR url)
 {
-	// Run the open command
 	SHELLEXECUTEINFO lsw = {};
 	lsw.cbSize = sizeof(SHELLEXECUTEINFO);
 	lsw.lpVerb = GYAZO_URL_OPEN;
@@ -88,7 +86,7 @@ void SetClipBoardText(LPCTSTR str)
 	LPTSTR	pText;
 	size_t	slen;
 
-	slen = _tcslen(str) + 1; // NULL
+	slen = _tcslen(str) + 1; // + \0
 
 	hText = GlobalAlloc(GMEM_DDESHARE | GMEM_MOVEABLE, slen * sizeof(TCHAR));
 
@@ -96,7 +94,7 @@ void SetClipBoardText(LPCTSTR str)
 	_tcsncpy_s(pText, slen, str, slen);
 	GlobalUnlock(hText);
 
-	// I open the clipboard
+	// set clipboard
 	OpenClipboard(NULL);
 	EmptyClipboard();
 	SetClipboardData(
@@ -109,7 +107,7 @@ void SetClipBoardText(LPCTSTR str)
 		hText);
 	CloseClipboard();
 
-	// Liberation
+	// release
 	GlobalFree(hText);
 }
 
@@ -136,30 +134,30 @@ bool ImageToPng(Image* image, LPCTSTR fileName)
 // Convert to PNG format
 bool ConvertPng(LPCTSTR destFile, LPCTSTR srcFile)
 {
-	// Initialization GDI+
+	// init GDI+
 	const GdiScopeInit& gpi = GdiScopeInit();
 
 	Image* image = new Image(srcFile, 0);
 
 	bool result = ImageToPng(image, destFile);
 
-	// Clean up
+	// release
 	delete image;
 
 	return result;
 }
 
-// PNG formatでsave (GDI + Use)
-bool SavePng(LPCTSTR fileName, HBITMAP hBmp)
+// Save HBITMAP to PNG image file
+bool BitmapToPng(HBITMAP hBmp, LPCTSTR fileName)
 {
-	// Initialization GDI+
+	// init GDI+
 	const GdiScopeInit& gpi = GdiScopeInit();
 
 	Bitmap* bitmap = new Bitmap(hBmp, NULL);
 
 	bool result = ImageToPng(bitmap, fileName);
 
-	// Clean up
+	// release
 	delete bitmap;
 
 	return result;

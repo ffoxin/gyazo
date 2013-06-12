@@ -20,7 +20,7 @@ namespace Gyazo
 	void				SetClipBoardText(LPCTSTR str);
 	bool				ImageToPng(Image* image, LPCTSTR fileName);
 	bool				ConvertPng(LPCTSTR destFile, LPCTSTR srcFile);
-	bool				SavePng(LPCTSTR fileName, HBITMAP hBmp);
+	bool				BitmapToPng(HBITMAP hBmp, LPCTSTR fileName);
 	bool				UploadFile(LPCTSTR fileName);
 	tstring				GetId();
 	bool				SaveId(LPCTSTR sId);
