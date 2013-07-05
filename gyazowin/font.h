@@ -7,21 +7,21 @@
 namespace Gyazo
 {
 
-class Font
-{
-public:
-	static HFONT GetFont(int fontHeight);
-	static void Release();
+	class Font
+	{
+	public:
+		static HFONT GetFont(int fontHeight);
+		static void Release();
 
-private:
-	Font(int fontHeight);
-	~Font();
+	private:
+		Font(int fontHeight);
+		~Font();
 
-private:
-	static Font* m_instance;
-	HFONT m_font;
-	int m_fontHeight;
-};
+	private:
+		static Font* m_instance;
+		HFONT m_font;
+		int m_fontHeight;
+	};
 
 }
 

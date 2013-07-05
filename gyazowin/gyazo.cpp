@@ -39,36 +39,34 @@ LRESULT CALLBACK	WndProcMain(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK	WndProcClip(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK	WndProcCursor(HWND, UINT, WPARAM, LPARAM);
 
-
 void				DrawRubberband(HDC hdc, LPRECT newRect);
 void				DrawCoordinates(HDC hdc, LPRECT newRect);
 int					DrawLabel(HDC hdc, Gyazo::Size textPos, LPCTSTR sText, int nText);
 
 // Entry point
 int APIENTRY _tWinMain(HINSTANCE hInstance,
-					   HINSTANCE hPrevInstance,
-					   LPTSTR lpCmdLine,
+					   HINSTANCE,
+					   LPTSTR,
 					   int nCmdShow)
 {
-	UNREFERENCED_PARAMETER(hPrevInstance);
-	UNREFERENCED_PARAMETER(lpCmdLine);
-
 	MSG msg;
 
-	// Get app directory
+	// Change working directory to app directory
 	TCHAR szThisPath[MAX_PATH];
 	GetModuleFileName(NULL, szThisPath, MAX_PATH);
 	PathRemoveFileSpec(szThisPath);
-
-	// Set the current directory to app directory
 	SetCurrentDirectory(szThisPath);
 
 	// Upload file if it specified as an argument
 	if (__argc == 2)
 	{
 		// Exit by file upload
-		LPCTSTR fileArg = __targv[1];
-		if (IsPng(fileArg))
+		String fileArg = __targv[1];
+		if (!IsPngFiles(fileArg))
+		{
+
+		}
+		if (IsPngFiles(fileArg))
 		{
 			// PNG to upload directly
 			UploadFile(fileArg);
@@ -302,7 +300,7 @@ void DrawCoordinates(HDC hdc, LPRECT newRect)
 		ShowWindow(hCursorWnd, SW_HIDE);
 		return;
 	}
-	
+
 	Gyazo::Rect coordRect = *newRect;
 	if (coordRect.left + coordRect.right > screenSize.cx)
 	{

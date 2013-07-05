@@ -1,247 +1,74 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-// System headers
-#include <windows.h>
-#include <tchar.h>
-
-// STL headers
-#include <string>
-#include <sstream>
-#include <fstream>
+// Project headers
+#include "types.h"
 
 namespace Gyazo
 {
 
-#ifdef UNICODE
-typedef std::wstring		tstring;
-
-typedef std::wstringstream	tstringstream;
-typedef std::wostringstream	tostringstream;
-typedef std::wistringstream	tistringstream;
-
-typedef std::wofstream		tofstream;
-typedef std::wifstream		tifstream;
-#else // not UNICODE
-typedef std::string			tstring;
-
-typedef std::stringstream	tstringstream;
-typedef std::ostringstream	tostringstream;
-typedef std::istringstream	tistringstream;
-
-typedef std::ofstream		tofstream;
-typedef std::ifstream		tifstream;
-#endif // UNICODE
-
-template<typename T>
-inline void swap(T& lr, T& rr)
-{
-	lr ^= rr ^= lr ^= rr;
-}
-
-class Size
-{
-public:
-	inline Size() :
-		cx(size.cx), 
-		cy(size.cy)
+	template<typename T>
+	inline void swap(T& lr, T& rr)
 	{
-		Init(0, 0);
+		T temp = lr;
+		lr = rr;
+		rr = temp;
 	}
 
-	inline Size(
-		const LONG& x, 
-		const LONG& y
-		) :
-		cx(size.cx), 
-		cy(size.cy)
+	class BaseSize
 	{
-		Init(x, y);
-	}
+	public:
+		BaseSize();
 
-	inline Size(
-		const Size& sz
-		) :
-		cx(size.cx), 
-		cy(size.cy)
+	public:
+		Size_t size;
+		// references to related fields of size
+		uint32_t&	cx;
+		uint32_t&	cy;
+	};
+
+	class Size : public BaseSize
 	{
-		Init(sz.cx, sz.cy);
-	}
+	public:
+		Size();
+		Size(uint32_t x, uint32_t y);
+		Size(const Size& size);
+		~Size();
 
-	inline Size(
-		const SIZE& sz
-		) :
-		cx(size.cx), 
-		cy(size.cy)
+		Size& operator=(const Size& size);
+
+	private:
+		void Init(uint32_t x, uint32_t y);
+		void Copy(const Size& size);
+	};
+
+	class BaseRect
 	{
-		Init(sz.cx, sz.cy);
-	}
+	public:
+		BaseRect();
+	public:
+		Rect_t		rect;
+		// references to related fields of rect
+		uint32_t&	left;
+		uint32_t&	top;
+		uint32_t&	right;
+		uint32_t&	bottom;
+	};
 
-	inline void Set(
-		const LONG& x, 
-		const LONG& y
-		)
+	class Rect : public BaseRect
 	{
-		Init(x, y);
-	}
+	public:
+		Rect();
+		Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom);
+		Rect(const Rect& rect);
+		~Rect();
 
-	inline Size& operator=(
-		const Size& sz
-		)
-	{
-		if (this != &sz)
-		{
-			Init(sz.cx, sz.cy);
-		}
+		Rect& operator=(const Rect& rect);
 
-		return *this;
-	}
-
-	inline Size& operator=(
-		const SIZE& sz
-		)
-	{
-		Init(sz.cx, sz.cy);
-
-		return *this;
-	}
-
-	inline operator SIZE&()
-	{
-		return size;
-	}
-
-	inline operator SIZE*()
-	{
-		return &size;
-	}
-
-public:
-	SIZE	size;
-	LONG&	cx;
-	LONG&	cy;
-
-private:
-	inline void Init(
-		const LONG& x, 
-		const LONG& y
-		)
-	{
-		size.cx = x;
-		size.cy = y;
-	}
-};
-
-class Rect
-{
-public:
-	inline Rect() :
-		left(rect.left), 
-		top(rect.top), 
-		right(rect.right), 
-		bottom(rect.bottom)
-	{
-		Init(0, 0, 0, 0);
-	}
-
-	inline Rect(
-		const LONG& newLeft, 
-		const LONG& newTop, 
-		const LONG& newRight, 
-		const LONG& newBottom
-		) :
-		left(rect.left), 
-		top(rect.top), 
-		right(rect.right), 
-		bottom(rect.bottom)
-	{
-		Init(newLeft, newTop, newRight, newBottom);
-	}
-
-	inline Rect(
-		const Rect& rc
-		) :
-		left(rect.left), 
-		top(rect.top), 
-		right(rect.right), 
-		bottom(rect.bottom)
-	{
-		Init(rc.left, rc.top, rc.right, rc.bottom);
-	}
-
-	inline Rect(
-		const RECT& rc
-		) :
-		left(rect.left), 
-		top(rect.top), 
-		right(rect.right), 
-		bottom(rect.bottom)
-	{
-		Init(rc.left, rc.top, rc.right, rc.bottom);
-	}
-
-	inline void Set(
-		const LONG& newLeft, 
-		const LONG& newTop, 
-		const LONG& newRight, 
-		const LONG& newBottom
-		)
-	{
-		Init(newLeft, newTop, newRight, newBottom);
-	}
-
-	inline Rect& operator=(
-		const Rect& rc
-		)
-	{
-		if (this != &rc)
-		{
-			Init(rc.left, rc.top, rc.right, rc.bottom);
-		}
-
-		return *this;
-	}
-
-	inline Rect& operator=(
-		const RECT& rc
-		)
-	{
-		Init(rc.left, rc.top, rc.right, rc.bottom);
-
-		return *this;
-	}
-
-	inline operator RECT&()
-	{
-		return rect;
-	}
-
-	inline operator RECT*()
-	{
-		return &rect;
-	}
-
-public:
-	RECT	rect;
-	LONG&	left;
-	LONG&	top;
-	LONG&	right;
-	LONG&	bottom;
-
-private:
-	inline void Init(
-		const LONG& newLeft, 
-		const LONG& newTop, 
-		const LONG& newRight, 
-		const LONG& newBottom
-		)
-	{
-		rect.left = newLeft;
-		rect.top = newTop;
-		rect.right = newRight;
-		rect.bottom = newBottom;
-	}
-};
+	private:
+		void Init(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom);
+		void Copy(const Rect& rect);
+	};
 
 } // namespace Gyazo
 
