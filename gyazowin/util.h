@@ -22,7 +22,7 @@ typedef std::wistringstream	tistringstream;
 
 typedef std::wofstream		tofstream;
 typedef std::wifstream		tifstream;
-#else // not UNICODE
+#else // UNICODE
 typedef std::string			tstring;
 
 typedef std::stringstream	tstringstream;
@@ -36,7 +36,9 @@ typedef std::ifstream		tifstream;
 template<typename T>
 inline void swap(T& lr, T& rr)
 {
-	lr ^= rr ^= lr ^= rr;
+	T temp = lr;
+	lr = rr;
+	rr = temp;
 }
 
 class Size

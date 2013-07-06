@@ -1,4 +1,5 @@
-﻿#include "gyazolib.h"
+﻿// STL
+#include <memory>
 
 // System headers
 #include <ShlObj.h>
@@ -9,12 +10,14 @@
 #include "gdiinit.h"
 #include "stringconstants.h"
 
+#include "gyazolib.h"
+
 namespace Gyazo
 {
 
 // I get the CLSID of the Encoder corresponding to the specified format
 // Cited from MSDN Library: Retrieving the Class Identifier for an Encoder
-int GetEncoderClsid(LPCWSTR format, CLSID* pClsid)
+int GetEncoderClsid(LPCWSTR format, CLSID& clsid)
 {
 	unsigned num = 0;		// number of image encoders
 	unsigned size = 0;		// size of the image encoder array in bytes
@@ -25,21 +28,20 @@ int GetEncoderClsid(LPCWSTR format, CLSID* pClsid)
 		return -1;
 	}
 
-	ImageCodecInfo* pImageCodecInfo = reinterpret_cast<ImageCodecInfo*>(new char[size]);
+	std::shared_ptr<ImageCodecInfo> pImageCodecInfo(
+		reinterpret_cast<ImageCodecInfo*>(new char[size]));
 
-	GetImageEncoders(num, size, pImageCodecInfo);
+	GetImageEncoders(num, size, pImageCodecInfo.get());
 
 	for (unsigned i = 0; i < num; ++i)
 	{
-		if (wcscmp(pImageCodecInfo[i].MimeType, format) == 0)
+		if (wcscmp(pImageCodecInfo.get()[i].MimeType, format) == 0)
 		{
-			*pClsid = pImageCodecInfo[i].Clsid;
-			delete pImageCodecInfo;
+			clsid = pImageCodecInfo.get()[i].Clsid;
 			return i;
 		}
 	}
 
-	delete[] pImageCodecInfo;
 	return -1;
 }
 
@@ -119,7 +121,7 @@ bool ImageToPng(Image* image, LPCTSTR fileName)
 	if (image->GetLastStatus() == 0)
 	{
 		CLSID clsidEncoder;
-		if (GetEncoderClsid(L"image/png", &clsidEncoder) != -1)
+		if (GetEncoderClsid(L"image/png", clsidEncoder) != -1)
 		{
 			if (image->Save(fileName, &clsidEncoder, 0) == 0)
 			{
@@ -134,15 +136,10 @@ bool ImageToPng(Image* image, LPCTSTR fileName)
 // Convert to PNG format
 bool ConvertPng(LPCTSTR destFile, LPCTSTR srcFile)
 {
-	// init GDI+
-	const GdiScopeInit& gpi = GdiScopeInit();
+	GdiScopeInit gdi;
 
-	Image* image = new Image(srcFile, 0);
-
-	bool result = ImageToPng(image, destFile);
-
-	// release
-	delete image;
+	std::shared_ptr<Image> image(new Image(srcFile, 0));
+	bool result = ImageToPng(image.get(), destFile);
 
 	return result;
 }
@@ -150,15 +147,10 @@ bool ConvertPng(LPCTSTR destFile, LPCTSTR srcFile)
 // Save HBITMAP to PNG image file
 bool BitmapToPng(HBITMAP hBmp, LPCTSTR fileName)
 {
-	// init GDI+
-	const GdiScopeInit& gpi = GdiScopeInit();
+	GdiScopeInit gdi;
 
-	Bitmap* bitmap = new Bitmap(hBmp, NULL);
-
-	bool result = ImageToPng(bitmap, fileName);
-
-	// release
-	delete bitmap;
+	std::shared_ptr<Bitmap> bitmap(new Bitmap(hBmp, NULL));
+	bool result = ImageToPng(bitmap.get(), fileName);
 
 	return result;
 }
@@ -189,8 +181,6 @@ bool UploadFile(LPCTSTR fileName)
 	buf << sCrLf;
 	buf << sContentData;
 	buf << sCrLf;
-	//buf << "Content-type: image/png";	// 一応
-	//buf << sCrLf;
 	buf << sCrLf;
 
 	// Read a PNG file
