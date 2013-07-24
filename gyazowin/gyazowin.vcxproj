@@ -87,7 +87,6 @@
     <ClCompile Include="rect.cpp" />
     <ClCompile Include="size.cpp" />
     <ClCompile Include="stringconstants.cpp" />
-    <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="font.h" />
@@ -98,7 +97,6 @@
     <ClInclude Include="size.h" />
     <ClInclude Include="stringconstants.h" />
     <ClInclude Include="types.h" />
-    <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="gyazo.rc" />

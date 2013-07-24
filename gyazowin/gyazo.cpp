@@ -15,7 +15,6 @@
 #include "gyazolib.h"
 #include "resource.h"
 #include "stringconstants.h"
-#include "util.h"
 
 const GyazoSize cursorWinOffset(5, 5);
 const GyazoSize clipWinTextBorder(5, 5);

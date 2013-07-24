@@ -136,7 +136,7 @@ bool ConvertPng(const string& destFile, const string& srcFile)
 
     std::shared_ptr<Image> image(new Image(srcFile.c_str(), 0));
 
-    bool result = ImageToPng(image.get(), destFile.c_str());
+    bool result = ImageToPng(image.get(), destFile);
 
     return result;
 }
@@ -327,10 +327,10 @@ bool UploadFile(const string& fileName)
             srcUrl += L".png";
 
             // Copy the URL to the clipboard
-            SetClipBoardText(srcUrl.c_str());
+            SetClipBoardText(srcUrl);
 
             // Launch an URL
-            ExecUrl(srcUrl.c_str());
+            ExecUrl(srcUrl);
 
             return true;
         }
@@ -390,11 +390,10 @@ bool SaveId(const string& sId)
         ofs.close();
 
         // Delete the old configuration file
-        LPCTSTR idFile = GYAZO_ID_FILENAME;
 
-        if (PathFileExists(idFile))
+        if (PathFileExists(GYAZO_ID_FILENAME))
         {
-            DeleteFile(idFile);
+            DeleteFile(GYAZO_ID_FILENAME);
         }
     }
     else
