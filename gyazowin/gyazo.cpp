@@ -174,17 +174,16 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance)
     return result;
 }
 
-// (I covered with a window full screen) initialization of instance
 BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 {
     HWND hWnd;
-    hInstance = hInst; // I will store instances processing in a global variable .
+    hInstance = hInst;
 
-    // It covers the entire virtual screen
-    screenOffset.Set(GetSystemMetrics(SM_XVIRTUALSCREEN), GetSystemMetrics(SM_YVIRTUALSCREEN));
-    screenSize.Set(GetSystemMetrics(SM_CXVIRTUALSCREEN), GetSystemMetrics(SM_CYVIRTUALSCREEN));
+    screenOffset.cx = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    screenOffset.cy = GetSystemMetrics(SM_YVIRTUALSCREEN);
+    screenSize.cx = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    screenSize.cy = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-    // Completely ni shi taウィthrough clothウをmake ru nn
     hWnd = CreateWindowEx(
         WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_TOPMOST
 #if (_WIN32_WINNT >= 0x0500)
@@ -348,14 +347,14 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         {
             GyazoRect winRect;
             GetWindowRect(hWnd, winRect);
-            GyazoSize clipRect(winRect.right - winRect.left, winRect.bottom - winRect.top);
+            GyazoSize clipSize = winRect;
 
             HDC hdc = GetDC(hWnd);
             HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
             SelectObject(hdc, hBrush);
             HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
             SelectObject(hdc, hPen);
-            Rectangle(hdc, 0, 0, clipRect.cx, clipRect.cy);
+            Rectangle(hdc, 0, 0, clipSize.cx, clipSize.cy);
 
             // The output size of the rectangle
             int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
@@ -370,7 +369,7 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             // Draw top left coordinates (top left corner)
             _stprintf_s(sText, GYAZO_POINT_FORMAT, winRect.left, winRect.top);
             nText = _tcslen(sText);
-            textPos.Set(clipWinTextBorder.cx, clipWinTextBorder.cy);
+            textPos = clipWinTextBorder;
 
             DrawLabel(hdc, textPos, sText, nText);
 
@@ -378,17 +377,16 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             _stprintf_s(sText, GYAZO_POINT_FORMAT, winRect.right, winRect.bottom);
             nText = _tcslen(sText);
             GetTextExtentPoint(hdc, sText, nText, textSize);
-            textPos.Set(clipRect.cx - textSize.cx - clipWinTextBorder.cx, 
-                clipRect.cy - textSize.cy - clipWinTextBorder.cy);
+            textPos = clipSize - textSize - clipWinTextBorder;
 
             DrawLabel(hdc, textPos, sText, nText);
 
             // Draw crop size (center)
-            _stprintf_s(sText, GYAZO_POINT_FORMAT, clipRect.cx, clipRect.cy);
+            _stprintf_s(sText, GYAZO_POINT_FORMAT, clipSize.cx, clipSize.cy);
             nText = _tcslen(sText);
             GetTextExtentPoint(hdc, sText, nText, textSize);
-            textPos.Set((clipRect.cx - textSize.cx) / 2, 
-                (clipRect.cy - textSize.cy) / 2);
+            textPos.cx = (clipSize.cx - textSize.cx) / 2;
+            textPos.cy = (clipSize.cy - textSize.cy) / 2;
 
             DrawLabel(hdc, textPos, sText, nText);
 
@@ -433,10 +431,11 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
             TCHAR sText[100];
 
             // Draw mouse coordinates
-            _stprintf_s(sText, GYAZO_POINT_FORMAT, cursorPos.cx, cursorPos.cy);
+            swprintf(sText, GYAZO_POINT_FORMAT, cursorPos.cx, cursorPos.cy);
             size_t nText = _tcslen(sText);
             GetTextExtentPoint(hdc, sText, nText, cursorTextSize);
-            textPos.Set(2, 0);
+            textPos.cx = 2;
+            textPos.cy = 0;
 
             DrawLabel(hdc, textPos, sText, nText);
 
@@ -484,9 +483,8 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
     case WM_MOUSEMOVE:
         {
-            cursorPos.Set(
-                LOWORD(lParam) + screenOffset.cx, 
-                HIWORD(lParam) + screenOffset.cy);
+            cursorPos.cx = LOWORD(lParam) + screenOffset.cx;
+            cursorPos.cy = HIWORD(lParam) + screenOffset.cy;
 
             hdc = GetDC(NULL);
 
@@ -500,11 +498,10 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             }
             else
             {
-                cursorWinRect.Set(
-                    cursorPos.cx + cursorWinOffset.cx, 
-                    cursorPos.cy + cursorWinOffset.cy, 
-                    cursorTextSize.cx + 4, 
-                    cursorTextSize.cy);
+                cursorWinRect.left      = cursorPos.cx + cursorWinOffset.cx;
+                cursorWinRect.top       = cursorPos.cy + cursorWinOffset.cy;
+                cursorWinRect.right     = cursorTextSize.cx + 4;
+                cursorWinRect.bottom    = cursorTextSize.cy;
 
                 DrawCoordinates(hdc, cursorWinRect);
                 SendMessage(hCursorWnd, WM_ERASEBKGND, NULL, NULL);
@@ -598,7 +595,7 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             GetTempPath(MAX_PATH, tmpDir);
             GetTempFileName(tmpDir, GYAZO_PREFIX, 0, tmpFile);
 
-            if (SavePng(tmpFile, newBMP))
+            if (SavePng(newBMP, tmpFile))
             {
                 UploadFile(tmpFile);
             }

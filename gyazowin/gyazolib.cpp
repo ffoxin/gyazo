@@ -45,7 +45,7 @@ int GetEncoderClsid(const string& format, CLSID& clsid)
 // Look at the header whether PNG image check (once)
 bool IsPngFiles(const string& fileName)
 {
-    const char pngHeader[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+    const uint8_t pngHeader[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
     const size_t pngHeaderSize = sizeof(pngHeader) / sizeof(*pngHeader);
 
     char readHeader[pngHeaderSize];
@@ -116,7 +116,7 @@ bool ImageToPng(Image* image, const string& fileName)
     if (image->GetLastStatus() == 0)
     {
         CLSID clsidEncoder;
-        if (GetEncoderClsid(L"image/png", &clsidEncoder) != -1)
+        if (GetEncoderClsid(L"image/png", clsidEncoder) != -1)
         {
             if (image->Save(fileName.c_str(), &clsidEncoder, 0) == 0)
             {
@@ -141,7 +141,8 @@ bool ConvertPng(const string& destFile, const string& srcFile)
     return result;
 }
 
-bool SavePng(const string& fileName, HBITMAP hBmp)
+// save BITMAP to PNG file
+bool SavePng(HBITMAP hBmp, const string& fileName)
 {
     const GdiScopeInit& gpi = GdiScopeInit();
 
@@ -312,7 +313,6 @@ bool UploadFile(const string& fileName)
             DWORD nUrl;
             char url[1024];
             string srcUrl;
-            string shareUrl = GYAZO_SHARE_PATH;
 
             // Never so long , but once well
             while (InternetReadFile(hRequest, (LPVOID) url, 1024, &nUrl) == TRUE
@@ -321,13 +321,16 @@ bool UploadFile(const string& fileName)
                 srcUrl.append(url, url + nUrl);
             }
 
-            shareUrl += srcUrl.substr(srcUrl.find_last_of(GYAZO_URL_DIVIDER) + 1);
+            string cache = L"cache.";
+            string gyazo = L"gyazo";
+            srcUrl.insert(srcUrl.find(gyazo), cache);
+            srcUrl += L".png";
 
             // Copy the URL to the clipboard
-            SetClipBoardText(shareUrl.c_str());
+            SetClipBoardText(srcUrl.c_str());
 
             // Launch an URL
-            ExecUrl(shareUrl.c_str());
+            ExecUrl(srcUrl.c_str());
 
             return true;
         }

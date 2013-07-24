@@ -1,7 +1,7 @@
 #ifndef STRINGCONSTANTS_H
 #define STRINGCONSTANTS_H
 
-#include "util.h"
+#include "types.h"
 
 extern const char_type* szTitle;
 extern const char_type* szWindowMainClass;

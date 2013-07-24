@@ -7,17 +7,17 @@
 using namespace Gdiplus;
 
 // Project headers
-#include "util.h"
+#include "types.h"
 
 extern const char_type* szTitle;
 
-int     GetEncoderClsid(const string& format, CLSID* pClsid);
+int     GetEncoderClsid(const string& format, CLSID& clsid);
 bool    IsPngFiles(const string& fileName);
 void    ExecUrl(const string& url);
 void    SetClipBoardText(const string& text);
 bool	ImageToPng(Image* image, const string& fileName);
 bool	ConvertPng(const string& destFile, const string& srcFile);
-bool	SavePng(const string& fileName, HBITMAP hBmp);
+bool	SavePng(HBITMAP hBmp, const string& fileName);
 bool	UploadFile(const string& fileName);
 string	GetId();
 bool	SaveId(const string& sId);

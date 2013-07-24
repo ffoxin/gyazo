@@ -84,6 +84,8 @@
     <ClCompile Include="gdiinit.cpp" />
     <ClCompile Include="gyazo.cpp" />
     <ClCompile Include="gyazolib.cpp" />
+    <ClCompile Include="rect.cpp" />
+    <ClCompile Include="size.cpp" />
     <ClCompile Include="stringconstants.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
@@ -91,7 +93,9 @@
     <ClInclude Include="font.h" />
     <ClInclude Include="gdiinit.h" />
     <ClInclude Include="gyazolib.h" />
+    <ClInclude Include="rect.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="size.h" />
     <ClInclude Include="stringconstants.h" />
     <ClInclude Include="types.h" />
     <ClInclude Include="util.h" />
