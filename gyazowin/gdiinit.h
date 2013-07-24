@@ -9,12 +9,12 @@ using namespace Gdiplus;
 class GdiScopeInit
 {
 public:
-	GdiScopeInit();
-	~GdiScopeInit();
+    GdiScopeInit();
+    ~GdiScopeInit();
 
 private:
-	GdiplusStartupInput		m_startupInput;
-	ULONG_PTR				m_token;
+    GdiplusStartupInput		m_startupInput;
+    ULONG_PTR				m_token;
 };
 
 #endif // GDIINIT_H

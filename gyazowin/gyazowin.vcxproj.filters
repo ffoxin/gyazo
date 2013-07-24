@@ -36,9 +36,6 @@
     <ClInclude Include="types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RawFile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="icon1.ico">
@@ -61,7 +58,7 @@
     <ClCompile Include="font.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RawFile.cpp">
+    <ClCompile Include="gdiinit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

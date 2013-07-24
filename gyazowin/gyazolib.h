@@ -5,28 +5,24 @@
 #include <windows.h>
 #include <gdiplus.h>
 using namespace Gdiplus;
-#include <tchar.h>
 
 // Project headers
 #include "util.h"
 
-namespace Gyazo
-{
-	extern LPCTSTR		szTitle;
+extern const char_type* szTitle;
 
-	int GetEncoderClsid(const wide_string& format, CLSID* pClsid);
-	bool IsPngFiles(const String& fileName);
-	void ExecUrl(const String& url);
-	void SetClipBoardText(const String& text);
-	bool				ImageToPng(Image* image, LPCTSTR fileName);
-	bool				ConvertPng(LPCTSTR destFile, LPCTSTR srcFile);
-	bool				SavePng(LPCTSTR fileName, HBITMAP hBmp);
-	bool				UploadFile(LPCTSTR fileName);
-	String				GetId();
-	bool				SaveId(LPCTSTR sId);
-	int					ErrorMessage(LPCTSTR lpText);
-	LPCTSTR				GetIdDirPath();
-	LPCTSTR				GetIdFilePath();
-}
+int     GetEncoderClsid(const string& format, CLSID* pClsid);
+bool    IsPngFiles(const string& fileName);
+void    ExecUrl(const string& url);
+void    SetClipBoardText(const string& text);
+bool	ImageToPng(Image* image, const string& fileName);
+bool	ConvertPng(const string& destFile, const string& srcFile);
+bool	SavePng(const string& fileName, HBITMAP hBmp);
+bool	UploadFile(const string& fileName);
+string	GetId();
+bool	SaveId(const string& sId);
+int		ErrorMessage(const string& lpText);
+string	GetIdDirPath();
+string	GetIdFilePath();
 
 #endif // GYAZOLIB_H

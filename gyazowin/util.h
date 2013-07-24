@@ -4,72 +4,59 @@
 // Project headers
 #include "types.h"
 
-namespace Gyazo
+class BaseSize
 {
+public:
+    BaseSize();
 
-	template<typename T>
-	inline void swap(T& lr, T& rr)
-	{
-		T temp = lr;
-		lr = rr;
-		rr = temp;
-	}
+public:
+    Size_t size;
+    // references to related fields of size
+    uint32_t&	cx;
+    uint32_t&	cy;
+};
 
-	class BaseSize
-	{
-	public:
-		BaseSize();
+class GyazoSize : public BaseSize
+{
+public:
+    GyazoSize();
+    GyazoSize(uint32_t x, uint32_t y);
+    GyazoSize(const GyazoSize& size);
+    ~GyazoSize();
 
-	public:
-		Size_t size;
-		// references to related fields of size
-		uint32_t&	cx;
-		uint32_t&	cy;
-	};
+    GyazoSize& operator=(const GyazoSize& size);
 
-	class Size : public BaseSize
-	{
-	public:
-		Size();
-		Size(uint32_t x, uint32_t y);
-		Size(const Size& size);
-		~Size();
+private:
+    void Init(uint32_t x, uint32_t y);
+    void Copy(const GyazoSize& size);
+};
 
-		Size& operator=(const Size& size);
+class BaseRect
+{
+public:
+    BaseRect();
+public:
+    RECT		rect;
+    // references to related fields of rect
+    uint32_t&	left;
+    uint32_t&	top;
+    uint32_t&	right;
+    uint32_t&	bottom;
+};
 
-	private:
-		void Init(uint32_t x, uint32_t y);
-		void Copy(const Size& size);
-	};
+class GyazoRect : public BaseRect
+{
+public:
+    GyazoRect();
+    GyazoRect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom);
+    GyazoRect(const GyazoRect& rect);
+    ~GyazoRect();
 
-	class BaseRect
-	{
-	public:
-		BaseRect();
-	public:
-		Rect_t		rect;
-		// references to related fields of rect
-		uint32_t&	left;
-		uint32_t&	top;
-		uint32_t&	right;
-		uint32_t&	bottom;
-	};
+    GyazoRect& operator=(const GyazoRect& rect);
 
-	class Rect : public BaseRect
-	{
-	public:
-		Rect();
-		Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom);
-		Rect(const Rect& rect);
-		~Rect();
-
-		Rect& operator=(const Rect& rect);
-
-	private:
-		void Init(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom);
-		void Copy(const Rect& rect);
-	};
-
-} // namespace Gyazo
+private:
+    void Init(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom);
+    void Copy(const GyazoRect& rect);
+};
 
 #endif // UTIL_H

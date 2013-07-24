@@ -1,112 +1,111 @@
 #include "util.h"
 
-namespace Gyazo
+//////////////////////////////////////////////////////////////////////////
+
+BaseSize::BaseSize()
+    : cx(size.cx)
+    , cy(size.cy)
 {
+    // empty
+}
 
-	//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
-	BaseSize::BaseSize()
-		: cx(size.cx)
-		, cy(size.cy)
-	{
-		// empty
-	}
+GyazoSize::GyazoSize()
+{
+    Init(0, 0);
+}
 
-	//////////////////////////////////////////////////////////////////////////
+GyazoSize::GyazoSize(uint32_t x, uint32_t y)
+{
+    Init(x, y);
+}
 
-	Size::Size()
-	{
-		Init(0, 0);
-	}
+GyazoSize::GyazoSize(const GyazoSize& size)
+{
+    Copy(size);
+}
 
-	Size::Size(uint32_t x, uint32_t y)
-	{
-		Init(x, y);
-	}
+GyazoSize::~GyazoSize()
+{
+    // empty
+}
 
-	Size::Size(const Size& size)
-	{
-		Copy(size);
-	}
+GyazoSize& GyazoSize::operator=(const GyazoSize& size)
+{
+    if (this != &size)
+    {
+        Copy(size);
+    }
 
-	Size::~Size()
-	{
-		// empty
-	}
+    return *this;
+}
 
-	Size& Size::operator=(const Size& size)
-	{
-		if (this != &size)
-		{
-			Copy(size);
-		}
+void GyazoSize::Init(uint32_t x, uint32_t y)
+{
+    cx = x;
+    cy = y;
+}
 
-		return *this;
-	}
+void GyazoSize::Copy(const GyazoSize& size)
+{
+    memcpy(&this->size, &size.size, sizeof(size.size));
+}
 
-	void Size::Init(uint32_t x, uint32_t y)
-	{
-		cx = x;
-		cy = y;
-	}
+//////////////////////////////////////////////////////////////////////////
 
-	void Size::Copy(const Size& size)
-	{
-		memcpy(&this->size, &size.size, sizeof(size.size));
-	}
+BaseRect::BaseRect()
+    : left(rect.left)
+    , top(rect.top)
+    , right(rect.right)
+    , bottom(rect.bottom)
+{
+    // empty
+}
 
-	//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 
-	BaseRect::BaseRect()
-		: left(rect.left)
-		, top(rect.top)
-		, right(rect.right)
-		, bottom(rect.bottom)
-	{
-		// empty
-	}
+GyazoRect::GyazoRect()
+{
+    Init(0, 0, 0, 0);
+}
 
-	//////////////////////////////////////////////////////////////////////////
+GyazoRect::GyazoRect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom)
+{
+    Init(left, top, right, bottom);
+}
 
-	Rect::Rect()
-	{
-		Init(0, 0, 0, 0);
-	}
+GyazoRect::GyazoRect(const GyazoRect& rect)
+{
+    Copy(rect);
+}
 
-	Rect::Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom)
-	{
-		Init(left, top, right, bottom);
-	}
+GyazoRect::~GyazoRect()
+{
+    // empty
+}
 
-	Rect::Rect(const Rect& rect)
-	{
-		Copy(rect);
-	}
+GyazoRect& GyazoRect::operator=(const GyazoRect& rect)
+{
+    if (this != &rect)
+    {
+        Copy(rect);
+    }
 
-	Rect::~Rect()
-	{
-		// empty
-	}
+    return *this;
+}
 
-	Rect& Rect::operator=(const Rect& rect)
-	{
-		Copy(rect);
-	}
+void GyazoRect::Init(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom)
+{
+    this->left = left;
+    this->top = top;
+    this->right = right;
+    this->bottom = bottom;
+}
 
-	void Rect::Init(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom)
-	{
-		this->left = left;
-		this->top = top;
-		this->right = right;
-		this->bottom = bottom;
-	}
+void GyazoRect::Copy(const GyazoRect& rect)
+{
+    memcpy(&this->rect, &rect.rect, sizeof(rect.rect));
+}
 
-	void Rect::Copy(const Rect& rect)
-	{
-		memcpy(&this->rect, &rect.rect, sizeof(rect.rect));
-	}
-
-	//////////////////////////////////////////////////////////////////////////
-
-} // namespace Gyazo
-
+//////////////////////////////////////////////////////////////////////////

@@ -1,45 +1,40 @@
 #include "stringconstants.h"
 
-namespace Gyazo
-{
+const char_type* szTitle			    = L"Gyazo";		// Text in the title bar
+const char_type* szWindowMainClass		= L"GYAZOWINM";	// Main window class name
+const char_type* szWindowLayerClass		= L"GYAZOWINL";	// Layer window class name
+const char_type* szWindowCursorClass	= L"GYAZOWINC";	// Cursor window class name
 
-LPCTSTR szTitle					= _T("Gyazo");		// Text in the title bar
-LPCTSTR szWindowMainClass		= _T("GYAZOWINM");	// Main window class name
-LPCTSTR szWindowLayerClass		= _T("GYAZOWINL");	// Layer window class name
-LPCTSTR szWindowCursorClass		= _T("GYAZOWINC");	// Cursor window class name
-
-LPCTSTR GYAZO_PREFIX			= _T("gya");
-LPCTSTR GYAZO_FONT_NAME			= _T("Tahoma");
-LPCTSTR GYAZO_POINT_FORMAT		= _T("%d:%d");
-LPCTSTR GYAZO_READ_BINARY		= _T("rb");
-LPCTSTR GYAZO_URL_OPEN			= _T("open");
-LPCTSTR GYAZO_UPLOAD_SERVER		= _T("gyazo.com");
-LPCTSTR GYAZO_UPLOAD_PATH		= _T("/upload.cgi");
-LPCTSTR GYAZO_SHARE_PATH		= _T("http://ffoxin.github.io/gyazo.htm?id=");
-LPCTSTR GYAZO_USER_AGENT		= _T("User-Agent: Gyazowin/1.0\r\n");
-LPCTSTR GYAZO_ID				= _T("X-Gyazo-Id");
-LPCTSTR GYAZO_HEADER			= _T("Content-type: multipart/form-data; boundary=----BOUNDARYBOUNDARY----");
-LPCTSTR GYAZO_ID_FILENAME		= _T("id.txt");
-LPCTSTR GYAZO_DIRNAME			= _T("\\Gyazo");
-LPCTSTR GYAZO_ID_FILEPATH		= _T("\\id.txt");
-LPCTSTR GYAZO_POST				= _T("POST");
-LPCTSTR GYAZO_URL_DIVIDER		= _T("/");
+const char_type* GYAZO_PREFIX			= L"gya";
+const char_type* GYAZO_FONT_NAME		= L"Tahoma";
+const char_type* GYAZO_POINT_FORMAT		= L"%d:%d";
+const char_type* GYAZO_READ_BINARY		= L"rb";
+const char_type* GYAZO_URL_OPEN			= L"open";
+const char_type* GYAZO_UPLOAD_SERVER	= L"gyazo.com";
+const char_type* GYAZO_UPLOAD_PATH		= L"/upload.cgi";
+const char_type* GYAZO_SHARE_PATH		= L"http://ffoxin.github.io/gyazo.htm?id=";
+const char_type* GYAZO_USER_AGENT		= L"User-Agent: Gyazowin/1.0\r\n";
+const char_type* GYAZO_ID				= L"X-Gyazo-Id";
+const char_type* GYAZO_HEADER			= L"Content-type: multipart/form-data; boundary=----BOUNDARYBOUNDARY----";
+const char_type* GYAZO_ID_FILENAME		= L"id.txt";
+const char_type* GYAZO_DIRNAME			= L"\\Gyazo";
+const char_type* GYAZO_ID_FILEPATH		= L"\\id.txt";
+const char_type* GYAZO_POST				= L"POST";
+const char_type* GYAZO_URL_DIVIDER		= L"/";
 
 
-LPCTSTR ERROR_CONVERT_IMAGE		= _T("Cannot convert this image");
-LPCTSTR ERROR_OPEN_PNG			= _T("PNG open failed");
-LPCTSTR ERROR_WININET_CONFIGURE	= _T("Cannot configure wininet");
-LPCTSTR ERROR_CONNECTION_INIT	= _T("Cannot initiate connection");
-LPCTSTR ERROR_COMPOSE_POST		= _T("Cannot compose post request");
-LPCTSTR ERROR_SET_USER_AGENT	= _T("Cannot set user agent");
-LPCTSTR ERROR_UPLOAD_IMAGE		= _T("Failed to upload (unexpected result code, under maintainance?)");
-LPCTSTR ERROR_UPLOAD_FAILED		= _T("Failed to upload");
+const char_type* ERROR_CONVERT_IMAGE	= L"Cannot convert this image";
+const char_type* ERROR_OPEN_PNG			= L"PNG open failed";
+const char_type* ERROR_WININET_CONFIGURE= L"Cannot configure wininet";
+const char_type* ERROR_CONNECTION_INIT	= L"Cannot initiate connection";
+const char_type* ERROR_COMPOSE_POST		= L"Cannot compose post request";
+const char_type* ERROR_SET_USER_AGENT	= L"Cannot set user agent";
+const char_type* ERROR_UPLOAD_IMAGE		= L"Failed to upload (unexpected result code, under maintainance?)";
+const char_type* ERROR_UPLOAD_FAILED		= L"Failed to upload";
 
-LPCSTR sBoundary				= "----BOUNDARYBOUNDARY----";		// boundary
-LPCSTR sDivider					= "--";
-LPCSTR sContentId				= "content-disposition: form-data; name=\"id\"";
-LPCSTR sContentData				= "content-disposition: form-data; name=\"imagedata\"; filename=\"gyazo.com\"";
+const char* sBoundary				    = "----BOUNDARYBOUNDARY----";		// boundary
+const char* sDivider					= "--";
+const char* sContentId				    = "content-disposition: form-data; name=\"id\"";
+const char* sContentData				= "content-disposition: form-data; name=\"imagedata\"; filename=\"gyazo.com\"";
 
 const char sCrLf[]				= { 0xd, 0xa, 0x0 };				// Diverted (CR + LF)
-
-} // namespace Gyazo

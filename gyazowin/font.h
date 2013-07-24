@@ -4,25 +4,20 @@
 // System headers
 #include <windows.h>
 
-namespace Gyazo
+class GyazoFont
 {
+public:
+    static HFONT GetFont(int fontHeight);
+    static void Release();
 
-	class Font
-	{
-	public:
-		static HFONT GetFont(int fontHeight);
-		static void Release();
+private:
+    GyazoFont(int fontHeight);
+    ~GyazoFont();
 
-	private:
-		Font(int fontHeight);
-		~Font();
-
-	private:
-		static Font* m_instance;
-		HFONT m_font;
-		int m_fontHeight;
-	};
-
-}
+private:
+    static GyazoFont* m_instance;
+    HFONT m_font;
+    int m_fontHeight;
+};
 
 #endif // FONT_H
