@@ -2,24 +2,19 @@
 #define GDIINIT_H
 
 // System headers
+#include <windows.h>
 #include <gdiplus.h>
 using namespace Gdiplus;
 
 class GdiScopeInit
 {
 public:
-	GdiScopeInit()
-	{
-		GdiplusStartup(&m_gdiplusToken, &m_gdiplusStartupInput, NULL);
-	}
-	~GdiScopeInit()
-	{
-		GdiplusShutdown(m_gdiplusToken);
-	}
+	GdiScopeInit();
+	~GdiScopeInit();
 
 private:
-	GdiplusStartupInput	m_gdiplusStartupInput;
-	ULONG_PTR			m_gdiplusToken;
+	GdiplusStartupInput		m_startupInput;
+	ULONG_PTR				m_token;
 };
 
 #endif // GDIINIT_H

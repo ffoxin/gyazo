@@ -81,6 +81,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="font.cpp" />
+    <ClCompile Include="gdiinit.cpp" />
     <ClCompile Include="gyazo.cpp" />
     <ClCompile Include="gyazolib.cpp" />
     <ClCompile Include="RawFile.cpp" />

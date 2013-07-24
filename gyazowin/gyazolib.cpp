@@ -1,4 +1,5 @@
-﻿#include "gyazolib.h"
+﻿// STL headers
+#include <memory>
 
 // System headers
 #include <ShlObj.h>
@@ -9,12 +10,14 @@
 #include "gdiinit.h"
 #include "stringconstants.h"
 
+#include "gyazolib.h"
+
 namespace Gyazo
 {
 
 	// I get the CLSID of the Encoder corresponding to the specified format
 	// Cited from MSDN Library: Retrieving the Class Identifier for an Encoder
-	int GetEncoderClsid(const wstring& format, CLSID* pClsid)
+	int GetEncoderClsid(const wide_string& format, CLSID& clsid)
 	{
 		unsigned num = 0;		// number of image encoders
 		unsigned size = 0;		// size of the image encoder array in bytes
@@ -25,22 +28,20 @@ namespace Gyazo
 			return -1;
 		}
 
-		//ImageCodecInfo* pImageCodecInfo = new ImageCodecInfo[num];
-		ImageCodecInfo* pImageCodecInfo = reinterpret_cast<ImageCodecInfo*>(new char[size]);
+		std::shared_ptr<ImageCodecInfo> imageCodecInfo(
+			reinterpret_cast<ImageCodecInfo*>(new char[size]));
 
-		GetImageEncoders(num, size, pImageCodecInfo);
+		GetImageEncoders(num, size, imageCodecInfo.get());
 
 		for (unsigned i = 0; i < num; ++i)
 		{
-			if (format == pImageCodecInfo[i].MimeType)
+			if (format == imageCodecInfo.get()[i].MimeType)
 			{
-				*pClsid = pImageCodecInfo[i].Clsid;
-				delete pImageCodecInfo;
+				clsid = imageCodecInfo.get()[i].Clsid;
 				return i;
 			}
 		}
 
-		delete[] pImageCodecInfo;
 		return -1;
 	}
 
@@ -52,18 +53,11 @@ namespace Gyazo
 		
 		char readHead[pngHeaderSize];
 
-		aifstream ifs(fileName.c_str(), std::ios_base::in | std::ios_base::binary);
+		byte_ifstream ifs(fileName.c_str(), std::ios_base::in | std::ios_base::binary);
 		if (!ifs.fail())
 		{
 			ifs.read(readHead, pngHeaderSize);
 		}
-		if (_tfopen_s(&fp, fileName, GYAZO_READ_BINARY) != 0
-			|| fread(readHead, 1, 8, fp) != 8)
-		{
-			// Can not read the file
-			return false;
-		}
-		fclose(fp);
 
 		// compare
 		if (memcmp(pngHead, readHead, sizeof(pngHead)) != 0)
@@ -87,18 +81,19 @@ namespace Gyazo
 	}
 
 	// Copy text to clipboard
-	void SetClipBoardText(LPCTSTR str)
+	void SetClipBoardText(const String& text)
 	{
-		HGLOBAL	hText;
-		LPTSTR	pText;
-		size_t	slen;
+		size_t slen = text.size() + 1;
+		const PChar_t pText = text.c_str();
 
-		slen = _tcslen(str) + 1; // NULL
+		HGLOBAL hClipText = GlobalAlloc(
+			GMEM_DDESHARE | GMEM_MOVEABLE, 
+			slen * sizeof(Char_t)
+			);
 
-		hText = GlobalAlloc(GMEM_DDESHARE | GMEM_MOVEABLE, slen * sizeof(TCHAR));
-
-		pText = (LPTSTR) GlobalLock(hText);
-		_tcsncpy_s(pText, slen, str, slen);
+		PChar_t pClipText = (PChar_t) GlobalLock(hText);
+		memcpy(pText, text.c)
+		_tcsncpy_s(pText, slen, text, slen);
 		GlobalUnlock(hText);
 
 		// I open the clipboard

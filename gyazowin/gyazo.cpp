@@ -41,7 +41,7 @@ LRESULT CALLBACK	WndProcCursor(HWND, UINT, WPARAM, LPARAM);
 
 void				DrawRubberband(HDC hdc, LPRECT newRect);
 void				DrawCoordinates(HDC hdc, LPRECT newRect);
-int					DrawLabel(HDC hdc, Gyazo::Size textPos, LPCTSTR sText, int nText);
+int					DrawLabel(HDC hdc, const Gyazo::Size& textPos, LPCTSTR sText, int nText);
 
 // Entry point
 int APIENTRY _tWinMain(HINSTANCE hInstance,
@@ -319,7 +319,7 @@ void DrawCoordinates(HDC hdc, LPRECT newRect)
 		TRUE);
 }
 
-int DrawLabel(HDC hdc, Gyazo::Size textPos, LPCTSTR sText, int nText)
+int DrawLabel(HDC hdc, const Gyazo::Size& textPos, LPCTSTR sText, int nText)
 {
 	int result;
 
@@ -599,7 +599,7 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 			GetTempPath(MAX_PATH, tmpDir);
 			GetTempFileName(tmpDir, GYAZO_PREFIX, 0, tmpFile);
 
-			if (SavePng(tmpFile, newBMP))
+			if (BitmapToPng(newBMP, tmpFile))
 			{
 				UploadFile(tmpFile);
 			}

@@ -9,11 +9,21 @@ namespace Gyazo
 	class RawFile
 	{
 	public:
+		enum Mode_t
+		{
+			READ, 
+			WRITE, 
+			APPEND
+		};
+
 		RawFile();
-		RawFile(const String& file);
+		RawFile(const byte_string& file, Mode_t mode);
+		RawFile(const RawFile& file);
 		virtual ~RawFile();
 
-		bool Open(const String& file);
+		RawFile& operator=(const RawFile& file);
+
+		bool Open(const byte_string& file, Mode_t mode);
 		bool Close();
 
 		void Read(uint8_t* buffer, uint32_t size);
@@ -23,13 +33,16 @@ namespace Gyazo
 		void SetPos(uint32_t offset) const;
 
 	private:
-		RawFile(const RawFile& ); // = delete
-		RawFile& operator=(const RawFile& ); // = delete
-
-		void OpenFile(const String& file);
+		void Swap(const RawFile& file);
 
 	private:
-		std::fstream m_file;
+		static const char* Modes[] = {
+			"rb", 
+			"wb", 
+			"ab"
+		};
+
+		FILE* m_file;
 	};
 
 }

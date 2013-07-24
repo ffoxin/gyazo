@@ -14,10 +14,10 @@ namespace Gyazo
 {
 	extern LPCTSTR		szTitle;
 
-	int GetEncoderClsid(const wstring& format, CLSID* pClsid);
+	int GetEncoderClsid(const wide_string& format, CLSID* pClsid);
 	bool IsPngFiles(const String& fileName);
 	void ExecUrl(const String& url);
-	void				SetClipBoardText(LPCTSTR str);
+	void SetClipBoardText(const String& text);
 	bool				ImageToPng(Image* image, LPCTSTR fileName);
 	bool				ConvertPng(LPCTSTR destFile, LPCTSTR srcFile);
 	bool				SavePng(LPCTSTR fileName, HBITMAP hBmp);

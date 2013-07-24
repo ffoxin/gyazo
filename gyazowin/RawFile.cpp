@@ -6,64 +6,68 @@ namespace Gyazo
 {
 
 	RawFile::RawFile()
+		: m_file(0)
 	{
 
 	}
 
-	RawFile::RawFile(const String& file)
+	RawFile::RawFile(const byte_string& file, Mode_t mode)
+		: m_file(0)
 	{
-		OpenFile(file);
+		Open(file, mode);
+	}
+
+	RawFile::RawFile(const RawFile& file)
+	{
+		Swap(file);
 	}
 
 	RawFile::~RawFile()
 	{
-		// "any open file is automatically closed when the fstream object is destroyed"
-		// Ref: http://www.cplusplus.com/reference/fstream/fstream/close/
+		Close();
 	}
 
-	bool RawFile::Open(const String& file)
+	RawFile& RawFile::operator=(const RawFile& file)
 	{
-		bool result = false;
-		if (!m_file.is_open())
+		Swap(file);
+	}
+
+	bool RawFile::Open(const byte_string& file, Mode_t mode)
+	{
+		if (m_file != 0)
 		{
-			OpenFile(file);
-			result = m_file.is_open();
+			Close();
 		}
 
-		return result;
+		m_file = fopen(file.c_str(), Modes[mode]);
+
+		return m_file != 0;
 	}
 
 	void RawFile::Read(uint8_t* buffer, uint32_t size)
 	{
-		m_file.read(reinterpret_cast<char *>(buffer), size);
+		fread(buffer, sizeof(*buffer), size, m_file);
 	}
 
 	void RawFile::Write(uint8_t* buffer, uint32_t size)
 	{
-		m_file.write(reinterpret_cast<char *>(buffer), size);
+		fwrite(buffer, sizeof(*buffer), size, m_file);
 	}
 
 	int32_t RawFile::GetPos() const
 	{
-
+		return ftell(m_file);
 	}
 
 	void RawFile::SetPos(uint32_t offset) const
 	{
-
+		fseek(m_file, offset, SEEK_SET);
 	}
 
-	RawFile& RawFile::operator=(const RawFile&)
+	void RawFile::Swap(const RawFile& file)
 	{
-
-	}
-
-	void RawFile::OpenFile(const String& file)
-	{
-		m_file.open(file, 
-			std::ios_base::in | 
-			std::ios_base::out | 
-			std::ios_base::binary);
+		m_file = file.m_file;
+		const_cast<FILE *>(file.m_file) = 0;
 	}
 
 } // namespace Gyazo
