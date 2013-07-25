@@ -375,50 +375,114 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     return FALSE;
 }
 
+void EraseBackground(const HWND& hWnd) {
+    HDC hdc = GetDC(hWnd);
+    HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
+    SelectObject(hdc, hBrush);
+    HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
+    SelectObject(hdc, hPen);
+    Rectangle(hdc, 0, 0, cursorTextSize.cx + 4, cursorTextSize.cy);
+
+    // The output size of the rectangle
+    int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+    SelectObject(hdc, GyazoFont::GetFont(fontHeight));
+
+    SetBkMode(hdc, TRANSPARENT);
+
+    GyazoSize textPos;
+    TCHAR sText[100];
+
+    // Draw mouse coordinates
+    swprintf(sText, sizeof(sText), GYAZO_POINT_FORMAT, cursorPos.cx, cursorPos.cy);
+    size_t nText = _tcslen(sText);
+    GetTextExtentPoint(hdc, sText, nText, cursorTextSize);
+    textPos.cx = 2;
+    textPos.cy = 0;
+
+    DrawLabel(hdc, textPos, sText, nText);
+
+    // Release resources
+    DeleteObject(hPen);
+    DeleteObject(hBrush);
+    GyazoFont::Release();
+    ReleaseDC(hWnd, hdc);
+}
+
 // Cursor window procedure
 LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
-    case WM_ERASEBKGND: {
-            HDC hdc = GetDC(hWnd);
-            HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
-            SelectObject(hdc, hBrush);
-            HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
-            SelectObject(hdc, hPen);
-            Rectangle(hdc, 0, 0, cursorTextSize.cx + 4, cursorTextSize.cy);
-
-            // The output size of the rectangle
-            int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-            SelectObject(hdc, GyazoFont::GetFont(fontHeight));
-
-            SetBkMode(hdc, TRANSPARENT);
-
-            GyazoSize textPos;
-            TCHAR sText[100];
-
-            // Draw mouse coordinates
-            swprintf(sText, sizeof(sText), GYAZO_POINT_FORMAT, cursorPos.cx, cursorPos.cy);
-            size_t nText = _tcslen(sText);
-            GetTextExtentPoint(hdc, sText, nText, cursorTextSize);
-            textPos.cx = 2;
-            textPos.cy = 0;
-
-            DrawLabel(hdc, textPos, sText, nText);
-
-            // Release resources
-            DeleteObject(hPen);
-            DeleteObject(hBrush);
-            GyazoFont::Release();
-            ReleaseDC(hWnd, hdc);
-
-            return TRUE;
-        }
-        break;
+    case WM_ERASEBKGND:
+        EraseBackground(hWnd);
+        return TRUE;
 
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
 
     return FALSE;
+}
+
+void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
+{
+    HDC hdc = GetDC(NULL);
+
+    // I turn off the line
+    DrawRubberband(hdc, NULL);
+
+    // Check coordinate
+    if (clipRect.right < clipRect.left) {
+        std::swap(clipRect.right, clipRect.left);
+    }
+    if (clipRect.bottom < clipRect.top) {
+        std::swap(clipRect.bottom, clipRect.top);
+    }
+
+    // Image capture
+    GyazoSize imageSize(
+        clipRect.right - clipRect.left + 1, 
+        clipRect.bottom - clipRect.top + 1);
+
+    if (imageSize.cx == 0 || imageSize.cy == 0) {
+        // It is not already in the image , it is not nothing
+        ReleaseDC(NULL, hdc);
+        DestroyWindow(hWnd);
+        return;
+    }
+
+    // Create a bitmap buffer
+    HBITMAP    newBMP    = CreateCompatibleBitmap(hdc, imageSize.cx, imageSize.cy);
+    HDC        newDC    = CreateCompatibleDC(hdc);
+
+    // Associated
+    SelectObject(newDC, newBMP);
+
+    // Portraitをobtain
+    BitBlt(newDC, 0, 0, imageSize.cx, imageSize.cy, 
+        hdc, clipRect.left, clipRect.top, SRCCOPY);
+
+    // I hide the window !
+    ShowWindow(hWnd, SW_HIDE);
+
+    // The determination of the temporary file name
+    TCHAR tmpDir[MAX_PATH], tmpFile[MAX_PATH];
+    GetTempPath(MAX_PATH, tmpDir);
+    GetTempFileName(tmpDir, GYAZO_PREFIX, 0, tmpFile);
+
+    if (BitmapToPng(newBMP, tmpFile)) {
+        UploadFile(tmpFile);
+    }
+    else {
+        // PNG save failed
+        ErrorMessage(ERROR_CONVERT_IMAGE);
+    }
+
+    // Clean up
+    DeleteFile(tmpFile);
+
+    DeleteDC(newDC);
+    DeleteObject(newBMP);
+
+    ReleaseDC(NULL, hdc);
 }
 
 // Window procedure
@@ -433,7 +497,6 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         // Cancellation
         DestroyWindow(hWnd);
         return DefWindowProc(hWnd, message, wParam, lParam);
-        break;
 
     case WM_TIMER:
         // Detection of the ESC key is pressed
@@ -443,54 +506,53 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         }
         break;
 
-    case WM_MOUSEMOVE: {
-            cursorPos.cx = LOWORD(lParam) + screenOffset.cx;
-            cursorPos.cy = HIWORD(lParam) + screenOffset.cy;
+    case WM_MOUSEMOVE:
+        cursorPos.cx = LOWORD(lParam) + screenOffset.cx;
+        cursorPos.cy = HIWORD(lParam) + screenOffset.cy;
 
-            hdc = GetDC(NULL);
+        hdc = GetDC(NULL);
 
-            if (isClip) {
-                // Set the new coordinate
-                clipRect.right    = cursorPos.cx;
-                clipRect.bottom    = cursorPos.cy;
+        if (isClip) {
+            // Set the new coordinate
+            clipRect.right    = cursorPos.cx;
+            clipRect.bottom    = cursorPos.cy;
 
-                DrawRubberband(hdc, clipRect);
-            }
-            else {
-                cursorWinRect.left      = cursorPos.cx + cursorWinOffset.cx;
-                cursorWinRect.top       = cursorPos.cy + cursorWinOffset.cy;
-                cursorWinRect.right     = cursorTextSize.cx + 4;
-                cursorWinRect.bottom    = cursorTextSize.cy;
-
-                DrawCoordinates(hdc, cursorWinRect);
-                SendMessage(hCursorWnd, WM_ERASEBKGND, NULL, NULL);
-            }
-
-            ReleaseDC(NULL, hdc);
-
-            SetCapture(hWnd);
+            DrawRubberband(hdc, clipRect);
         }
+        else {
+            cursorWinRect.left      = cursorPos.cx + cursorWinOffset.cx;
+            cursorWinRect.top       = cursorPos.cy + cursorWinOffset.cy;
+            cursorWinRect.right     = cursorTextSize.cx + 4;
+            cursorWinRect.bottom    = cursorTextSize.cy;
+
+            DrawCoordinates(hdc, cursorWinRect);
+            SendMessage(hCursorWnd, WM_ERASEBKGND, NULL, NULL);
+        }
+
+        ReleaseDC(NULL, hdc);
+
+        SetCapture(hWnd);
         break;
 
 
-    case WM_LBUTTONDOWN: {
-            // Clip start
-            isClip = true;
+    case WM_LBUTTONDOWN:
+        HDC hdc;
+        // Clip start
+        isClip = true;
 
-            ReleaseCapture();
+        ReleaseCapture();
 
-            // hide windows with mouse coordinates
-            HDC hdc = GetDC(NULL);
-            DrawCoordinates(hdc, NULL);
-            ReleaseDC(NULL, hdc);
+        // hide windows with mouse coordinates
+        hdc = GetDC(NULL);
+        DrawCoordinates(hdc, NULL);
+        ReleaseDC(NULL, hdc);
 
-            // Set the initial position
-            clipRect.left    = LOWORD(lParam) + screenOffset.cx;
-            clipRect.top    = HIWORD(lParam) + screenOffset.cy;
+        // Set the initial position
+        clipRect.left    = LOWORD(lParam) + screenOffset.cx;
+        clipRect.top    = HIWORD(lParam) + screenOffset.cy;
 
-            // Capture the mouse
-            SetCapture(hWnd);
-        }
+        // Capture the mouse
+        SetCapture(hWnd);
         break;
 
     case WM_LBUTTONUP: {
@@ -505,65 +567,8 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             clipRect.bottom    = HIWORD(lParam) + screenOffset.cy;
 
             // Screen ni direct drawing,っte -shaped
-            HDC hdc = GetDC(NULL);
+            SaveAndUpload(hWnd, clipRect);
 
-            // I turn off the line
-            DrawRubberband(hdc, NULL);
-
-            // Check coordinate
-            if (clipRect.right < clipRect.left) {
-                std::swap(clipRect.right, clipRect.left);
-            }
-            if (clipRect.bottom < clipRect.top) {
-                std::swap(clipRect.bottom, clipRect.top);
-            }
-
-            // Image capture
-            GyazoSize imageSize(
-                clipRect.right - clipRect.left + 1, 
-                clipRect.bottom - clipRect.top + 1);
-
-            if (imageSize.cx == 0 || imageSize.cy == 0) {
-                // It is not already in the image , it is not nothing
-                ReleaseDC(NULL, hdc);
-                DestroyWindow(hWnd);
-                break;
-            }
-
-            // Create a bitmap buffer
-            HBITMAP    newBMP    = CreateCompatibleBitmap(hdc, imageSize.cx, imageSize.cy);
-            HDC        newDC    = CreateCompatibleDC(hdc);
-
-            // Associated
-            SelectObject(newDC, newBMP);
-
-            // Portraitをobtain
-            BitBlt(newDC, 0, 0, imageSize.cx, imageSize.cy, 
-                hdc, clipRect.left, clipRect.top, SRCCOPY);
-
-            // I hide the window !
-            ShowWindow(hWnd, SW_HIDE);
-
-            // The determination of the temporary file name
-            TCHAR tmpDir[MAX_PATH], tmpFile[MAX_PATH];
-            GetTempPath(MAX_PATH, tmpDir);
-            GetTempFileName(tmpDir, GYAZO_PREFIX, 0, tmpFile);
-
-            if (BitmapToPng(newBMP, tmpFile)) {
-                UploadFile(tmpFile);
-            }
-            else {
-                // PNG save failed
-                ErrorMessage(ERROR_CONVERT_IMAGE);
-            }
-
-            // Clean up
-            DeleteFile(tmpFile);
-
-            DeleteDC(newDC);
-            DeleteObject(newBMP);
-
-            ReleaseDC(NULL, hdc);
             DestroyWindow(hWnd);
             PostQuitMessage(0);
         }
