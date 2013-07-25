@@ -3,8 +3,7 @@
 
 #include <windows.h>
 
-class BaseSize
-{
+class BaseSize {
 public:
     BaseSize();
 
@@ -18,8 +17,7 @@ public:
     LONG&   cy;
 };
 
-class GyazoSize : public BaseSize
-{
+class GyazoSize : public BaseSize {
 public:
     GyazoSize();
     GyazoSize(const LONG& x_, const LONG& y_);

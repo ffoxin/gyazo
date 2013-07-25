@@ -6,15 +6,14 @@
 #include <gdiplus.h>
 using namespace Gdiplus;
 
-class GdiScopeInit
-{
+class GdiScopeInit {
 public:
     GdiScopeInit();
     ~GdiScopeInit();
 
 private:
-    GdiplusStartupInput		m_startupInput;
-    ULONG_PTR				m_token;
+    GdiplusStartupInput     m_startupInput;
+    ULONG_PTR               m_token;
 };
 
 #endif // GDIINIT_H

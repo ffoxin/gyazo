@@ -2,8 +2,6 @@
 #define TYPES_H
 
 // STL headers
-#include <fstream>
-#include <sstream>
 #include <string>
 
 // Project headers
@@ -23,7 +21,12 @@ typedef unsigned __int64    uint64_t;
 #include <stdint.h>
 #endif
 
-typedef std::wstring        string;
-typedef wchar_t             char_type;
+typedef std::string         cstring;
+typedef std::wstring        wstring;
+
+typedef wstring             string;
+typedef string::value_type  char_type;
+
+#define Text(x) (L ## x)
 
 #endif // TYPES_H

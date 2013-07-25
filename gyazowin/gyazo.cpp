@@ -20,33 +20,32 @@ const GyazoSize cursorWinOffset(5, 5);
 const GyazoSize clipWinTextBorder(5, 5);
 
 // Globals
-HINSTANCE hInstance;				// Application instance
+HINSTANCE hInstance;                // Application instance
 HWND hClipWnd;
 HWND hCursorWnd;
-GyazoRect cursorWinRect;			// mouse coordinates window rect
-GyazoSize cursorTextSize;			// mouse coordinates text size
-GyazoSize cursorPos;				// mouse cursor position
+GyazoRect cursorWinRect;            // mouse coordinates window rect
+GyazoSize cursorTextSize;           // mouse coordinates text size
+GyazoSize cursorPos;                // mouse cursor position
 
-GyazoSize screenOffset;			// virtual screen offset
-GyazoSize screenSize;				// virtual screen size
+GyazoSize screenOffset;             // virtual screen offset
+GyazoSize screenSize;               // virtual screen size
 
 // Declarations
-ATOM				RegisterGyazoClass(HINSTANCE);
-BOOL				InitInstance(HINSTANCE, int);
-LRESULT CALLBACK	WndProcMain(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK	WndProcClip(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK	WndProcCursor(HWND, UINT, WPARAM, LPARAM);
+ATOM                RegisterGyazoClass(HINSTANCE);
+BOOL                InitInstance(HINSTANCE, int);
+LRESULT CALLBACK    WndProcMain(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK    WndProcClip(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK    WndProcCursor(HWND, UINT, WPARAM, LPARAM);
 
-void				DrawRubberband(HDC hdc, LPRECT newRect);
-void				DrawCoordinates(HDC hdc, LPRECT newRect);
-int					DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText);
+void                DrawRubberband(HDC hdc, LPRECT newRect);
+void                DrawCoordinates(HDC hdc, LPRECT newRect);
+int                 DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText);
 
 // Entry point
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                        HINSTANCE,
                        LPTSTR,
-                       int nCmdShow)
-{
+                       int nCmdShow) {
     MSG msg;
 
     // Change working directory to app directory
@@ -56,33 +55,27 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     SetCurrentDirectory(szThisPath);
 
     // Upload file if it specified as an argument
-    if (__argc == 2)
-    {
+    if (__argc == 2) {
         // Exit by file upload
         string fileArg = __targv[1];
-        if (!IsPngFiles(fileArg))
-        {
+        if (!IsPngFiles(fileArg)) {
 
         }
-        if (IsPngFiles(fileArg))
-        {
+        if (IsPngFiles(fileArg)) {
             // PNG to upload directly
             UploadFile(fileArg);
         }
-        else
-        {
+        else {
             // Convert to PNG format
             TCHAR tmpDir[MAX_PATH], tmpFile[MAX_PATH];
             GetTempPath(MAX_PATH, tmpDir);
             GetTempFileName(tmpDir, GYAZO_PREFIX, 0, tmpFile);
 
-            if (ConvertPng(tmpFile, fileArg))
-            {
+            if (FileToPng(tmpFile, fileArg)) {
                 //Upload
                 UploadFile(tmpFile);
             }
-            else
-            {
+            else {
                 // Can not be converted into PNG
                 ErrorMessage(ERROR_CONVERT_IMAGE);
             }
@@ -95,14 +88,12 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     RegisterGyazoClass(hInstance);
 
     // I run the application initialization :
-    if (!InitInstance (hInstance, nCmdShow))
-    {
+    if (!InitInstance (hInstance, nCmdShow)) {
         return FALSE;
     }
 
     // Main message loop :
-    while (GetMessage(&msg, NULL, 0, 0))
-    {
+    while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
@@ -111,70 +102,65 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 }
 
 // To register a window class
-ATOM RegisterGyazoClass(HINSTANCE hInstance)
-{
+ATOM RegisterGyazoClass(HINSTANCE hInstance) {
     WNDCLASS wc;
     ATOM result;
 
     // Main window
-    wc.style			= 0;							// Do not send a WM_PAINT
-    wc.lpfnWndProc		= WndProcMain;
-    wc.cbClsExtra		= 0;
-    wc.cbWndExtra		= 0;
-    wc.hInstance		= hInstance;
-    wc.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-    wc.hCursor			= LoadCursor(NULL, IDC_CROSS);	// + Cursor
-    wc.hbrBackground	= 0;							// Background
-    wc.lpszMenuName		= 0;
-    wc.lpszClassName	= szWindowMainClass;
+    wc.style            = 0;                            // Do not send a WM_PAINT
+    wc.lpfnWndProc      = WndProcMain;
+    wc.cbClsExtra       = 0;
+    wc.cbWndExtra       = 0;
+    wc.hInstance        = hInstance;
+    wc.hIcon            = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wc.hCursor          = LoadCursor(NULL, IDC_CROSS);    // + Cursor
+    wc.hbrBackground    = 0;                            // Background
+    wc.lpszMenuName     = 0;
+    wc.lpszClassName    = sWindowMainClass;
 
     result = RegisterClass(&wc);
-    if (result == 0)
-    {
+    if (result == 0) {
         return 0;
     }
 
     // Clip window
-    wc.style			= CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc		= WndProcClip;
-    wc.cbClsExtra		= 0;
-    wc.cbWndExtra		= 0;
-    wc.hInstance		= hInstance;
-    wc.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-    wc.hCursor			= LoadCursor(NULL, IDC_CROSS);	// + Cursor
-    wc.hbrBackground	= (HBRUSH) GetStockObject(WHITE_BRUSH);
-    wc.lpszMenuName		= 0;
-    wc.lpszClassName	= szWindowLayerClass;
+    wc.style            = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc      = WndProcClip;
+    wc.cbClsExtra       = 0;
+    wc.cbWndExtra       = 0;
+    wc.hInstance        = hInstance;
+    wc.hIcon            = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wc.hCursor          = LoadCursor(NULL, IDC_CROSS);    // + Cursor
+    wc.hbrBackground    = (HBRUSH) GetStockObject(WHITE_BRUSH);
+    wc.lpszMenuName     = 0;
+    wc.lpszClassName    = sWindowLayerClass;
 
     result = RegisterClass(&wc);
-    if (result == 0)
-    {
+    if (result == 0) {
         return 0;
     }
 
     // Cursor window
-    wc.style			= CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc		= WndProcCursor;
-    wc.cbClsExtra		= 0;
-    wc.cbWndExtra		= 0;
-    wc.hInstance		= hInstance;
-    wc.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-    wc.hCursor			= LoadCursor(NULL, IDC_CROSS);	// + Cursor
-    wc.hbrBackground	= (HBRUSH) GetStockObject(BLACK_BRUSH);
-    wc.lpszMenuName		= 0;
-    wc.lpszClassName	= szWindowCursorClass;
+    wc.style            = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc      = WndProcCursor;
+    wc.cbClsExtra       = 0;
+    wc.cbWndExtra       = 0;
+    wc.hInstance        = hInstance;
+    wc.hIcon            = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wc.hCursor          = LoadCursor(NULL, IDC_CROSS);    // + Cursor
+    wc.hbrBackground    = (HBRUSH) GetStockObject(BLACK_BRUSH);
+    wc.lpszMenuName     = 0;
+    wc.lpszClassName    = sWindowCursorClass;
 
     result = RegisterClass(&wc);
-    if (result == 0)
-    {
+    if (result == 0) {
         return 0;
     }
 
     return result;
 }
 
-BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
-{
+BOOL InitInstance(HINSTANCE hInst, int nCmdShow) {
     HWND hWnd;
     hInstance = hInst;
 
@@ -189,13 +175,12 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
         | WS_EX_NOACTIVATE
 #endif
         ,
-        szWindowMainClass, NULL, WS_POPUP,
+        sWindowMainClass, NULL, WS_POPUP,
         0, 0, 0, 0,
         NULL, NULL, hInst, NULL);
 
     // Did not make ... ?
-    if (!hWnd)
-    {
+    if (!hWnd) {
         return FALSE;
     }
 
@@ -216,7 +201,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
         | WS_EX_LAYERED | WS_EX_NOACTIVATE
 #endif
         ,
-        szWindowLayerClass, NULL, WS_POPUP,
+        sWindowLayerClass, NULL, WS_POPUP,
         0, 0, 0, 0,
         hWnd, NULL, hInst, NULL);
 
@@ -228,7 +213,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
         | WS_EX_LAYERED | WS_EX_NOACTIVATE
 #endif
         ,
-        szWindowCursorClass, NULL, WS_POPUP,
+        sWindowCursorClass, NULL, WS_POPUP,
         0, 0, 0, 0,
         hWnd, NULL, hInst, NULL);
 
@@ -238,12 +223,10 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 }
 
 // Drawing rubber band
-void DrawRubberband(HDC hdc, LPRECT newRect)
-{
-    static bool firstDraw = true;	// First does not perform to erase the previous band
+void DrawRubberband(HDC hdc, LPRECT newRect) {
+    static bool firstDraw = true;   // First does not perform to erase the previous band
 
-    if (firstDraw)
-    {
+    if (firstDraw) {
         // View clip window
         ShowWindow(hClipWnd, SW_SHOW);
         UpdateWindow(hClipWnd);
@@ -251,8 +234,7 @@ void DrawRubberband(HDC hdc, LPRECT newRect)
         firstDraw = false;
     }
 
-    if (newRect == NULL)
-    {
+    if (newRect == NULL) {
         // Hide clip window
         ShowWindow(hClipWnd, SW_HIDE);
         return;
@@ -260,12 +242,10 @@ void DrawRubberband(HDC hdc, LPRECT newRect)
 
     // Check coordinate
     GyazoRect clipRect = *newRect;
-    if (clipRect.right < clipRect.left)
-    {
+    if (clipRect.right < clipRect.left) {
         std::swap(clipRect.right, clipRect.left);
     }
-    if (clipRect.bottom < clipRect.top)
-    {
+    if (clipRect.bottom < clipRect.top) {
         std::swap(clipRect.bottom, clipRect.top);
     }
 
@@ -278,12 +258,10 @@ void DrawRubberband(HDC hdc, LPRECT newRect)
 }
 
 // Drawing rubber band
-void DrawCoordinates(HDC hdc, LPRECT newRect)
-{
-    static bool firstDraw = true;	// First does not perform to erase the previous band
+void DrawCoordinates(HDC hdc, LPRECT newRect) {
+    static bool firstDraw = true;   // First does not perform to erase the previous band
 
-    if (firstDraw)
-    {
+    if (firstDraw) {
         // View coordinate window
         ShowWindow(hCursorWnd, SW_SHOW);
         UpdateWindow(hCursorWnd);
@@ -291,20 +269,17 @@ void DrawCoordinates(HDC hdc, LPRECT newRect)
         firstDraw = false;
     }
 
-    if (newRect == NULL)
-    {
+    if (newRect == NULL) {
         // Hide the coordinate window
         ShowWindow(hCursorWnd, SW_HIDE);
         return;
     }
 
     GyazoRect coordRect = *newRect;
-    if (coordRect.left + coordRect.right > screenSize.cx)
-    {
+    if (coordRect.left + coordRect.right > screenSize.cx) {
         coordRect.left = screenSize.cx - coordRect.right;
     }
-    if (coordRect.top + coordRect.bottom > screenSize.cy)
-    {
+    if (coordRect.top + coordRect.bottom > screenSize.cy) {
         coordRect.top = screenSize.cy - coordRect.bottom;
     }
 
@@ -316,21 +291,18 @@ void DrawCoordinates(HDC hdc, LPRECT newRect)
         TRUE);
 }
 
-int DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText)
-{
+int DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText) {
     int result;
 
     SetTextColor(hdc, RGB(0, 0, 0));
     result = TextOut(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
-    if (result == 0)
-    {
+    if (result == 0) {
         return result;
     }
 
     SetTextColor(hdc, RGB(255, 255, 255));
     result = TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
-    if (result == 0)
-    {
+    if (result == 0) {
         return result;
     }
 
@@ -338,12 +310,9 @@ int DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText)
 }
 
 // Layer window procedure
-LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-    case WM_ERASEBKGND:
-        {
+LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+    case WM_ERASEBKGND: {
             GyazoRect winRect;
             GetWindowRect(hWnd, winRect);
             GyazoSize clipSize = winRect;
@@ -407,12 +376,9 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 }
 
 // Cursor window procedure
-LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-    case WM_ERASEBKGND:
-        {
+LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
+    case WM_ERASEBKGND: {
             HDC hdc = GetDC(hWnd);
             HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
             SelectObject(hdc, hBrush);
@@ -430,7 +396,7 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
             TCHAR sText[100];
 
             // Draw mouse coordinates
-            swprintf(sText, GYAZO_POINT_FORMAT, cursorPos.cx, cursorPos.cy);
+            swprintf(sText, sizeof(sText), GYAZO_POINT_FORMAT, cursorPos.cx, cursorPos.cy);
             size_t nText = _tcslen(sText);
             GetTextExtentPoint(hdc, sText, nText, cursorTextSize);
             textPos.cx = 2;
@@ -456,15 +422,13 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 }
 
 // Window procedure
-LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
+LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     HDC hdc;
 
     static bool isClip = false;
     static GyazoRect clipRect;
 
-    switch (message)
-    {
+    switch (message) {
     case WM_RBUTTONDOWN:
         // Cancellation
         DestroyWindow(hWnd);
@@ -473,30 +437,26 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
     case WM_TIMER:
         // Detection of the ESC key is pressed
-        if (GetKeyState(VK_ESCAPE) & 0x8000)
-        {
+        if (GetKeyState(VK_ESCAPE) & 0x8000) {
             DestroyWindow(hWnd);
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
         break;
 
-    case WM_MOUSEMOVE:
-        {
+    case WM_MOUSEMOVE: {
             cursorPos.cx = LOWORD(lParam) + screenOffset.cx;
             cursorPos.cy = HIWORD(lParam) + screenOffset.cy;
 
             hdc = GetDC(NULL);
 
-            if (isClip)
-            {
+            if (isClip) {
                 // Set the new coordinate
-                clipRect.right	= cursorPos.cx;
-                clipRect.bottom	= cursorPos.cy;
+                clipRect.right    = cursorPos.cx;
+                clipRect.bottom    = cursorPos.cy;
 
                 DrawRubberband(hdc, clipRect);
             }
-            else
-            {
+            else {
                 cursorWinRect.left      = cursorPos.cx + cursorWinOffset.cx;
                 cursorWinRect.top       = cursorPos.cy + cursorWinOffset.cy;
                 cursorWinRect.right     = cursorTextSize.cx + 4;
@@ -513,8 +473,7 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         break;
 
 
-    case WM_LBUTTONDOWN:
-        {
+    case WM_LBUTTONDOWN: {
             // Clip start
             isClip = true;
 
@@ -526,16 +485,15 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             ReleaseDC(NULL, hdc);
 
             // Set the initial position
-            clipRect.left	= LOWORD(lParam) + screenOffset.cx;
-            clipRect.top	= HIWORD(lParam) + screenOffset.cy;
+            clipRect.left    = LOWORD(lParam) + screenOffset.cx;
+            clipRect.top    = HIWORD(lParam) + screenOffset.cy;
 
             // Capture the mouse
             SetCapture(hWnd);
         }
         break;
 
-    case WM_LBUTTONUP:
-        {
+    case WM_LBUTTONUP: {
             // Clip end
             isClip = false;
 
@@ -543,8 +501,8 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             ReleaseCapture();
 
             // Set the new coordinate
-            clipRect.right	= LOWORD(lParam) + screenOffset.cx;
-            clipRect.bottom	= HIWORD(lParam) + screenOffset.cy;
+            clipRect.right    = LOWORD(lParam) + screenOffset.cx;
+            clipRect.bottom    = HIWORD(lParam) + screenOffset.cy;
 
             // Screen ni direct drawing,っte -shaped
             HDC hdc = GetDC(NULL);
@@ -553,12 +511,10 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             DrawRubberband(hdc, NULL);
 
             // Check coordinate
-            if (clipRect.right < clipRect.left)
-            {
+            if (clipRect.right < clipRect.left) {
                 std::swap(clipRect.right, clipRect.left);
             }
-            if (clipRect.bottom < clipRect.top)
-            {
+            if (clipRect.bottom < clipRect.top) {
                 std::swap(clipRect.bottom, clipRect.top);
             }
 
@@ -567,8 +523,7 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                 clipRect.right - clipRect.left + 1, 
                 clipRect.bottom - clipRect.top + 1);
 
-            if (imageSize.cx == 0 || imageSize.cy == 0)
-            {
+            if (imageSize.cx == 0 || imageSize.cy == 0) {
                 // It is not already in the image , it is not nothing
                 ReleaseDC(NULL, hdc);
                 DestroyWindow(hWnd);
@@ -576,8 +531,8 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             }
 
             // Create a bitmap buffer
-            HBITMAP	newBMP	= CreateCompatibleBitmap(hdc, imageSize.cx, imageSize.cy);
-            HDC		newDC	= CreateCompatibleDC(hdc);
+            HBITMAP    newBMP    = CreateCompatibleBitmap(hdc, imageSize.cx, imageSize.cy);
+            HDC        newDC    = CreateCompatibleDC(hdc);
 
             // Associated
             SelectObject(newDC, newBMP);
@@ -594,12 +549,10 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             GetTempPath(MAX_PATH, tmpDir);
             GetTempFileName(tmpDir, GYAZO_PREFIX, 0, tmpFile);
 
-            if (SavePng(newBMP, tmpFile))
-            {
+            if (BitmapToPng(newBMP, tmpFile)) {
                 UploadFile(tmpFile);
             }
-            else
-            {
+            else {
                 // PNG save failed
                 ErrorMessage(ERROR_CONVERT_IMAGE);
             }

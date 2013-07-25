@@ -6,6 +6,10 @@
 #include <Shlwapi.h>
 #include <WinInet.h>
 
+// STL headers
+#include <fstream>
+#include <sstream>
+
 // Project headers
 #include "gdiinit.h"
 #include "stringconstants.h"
@@ -14,51 +18,44 @@
 
 // I get the CLSID of the Encoder corresponding to the specified format
 // Cited from MSDN Library: Retrieving the Class Identifier for an Encoder
-int GetEncoderClsid(const string& format, CLSID& clsid)
-{
-    unsigned num = 0;		// number of image encoders
-    unsigned size = 0;		// size of the image encoder array in bytes
+bool GetEncoderClsid(const string& format, CLSID& clsid) {
+    size_t num = 0;     // number of image encoders
+    size_t size = 0;    // size of the image encoder array in bytes
 
     GetImageEncodersSize(&num, &size);
-    if (size == 0)
-    {
-        return -1;
-    }
+    if (size != 0) {
+        std::shared_ptr<char> imageCodecInfo(
+            new char[size], 
+            [](char* p){ delete[] p; });
+        ImageCodecInfo* pImageCodecInfo = reinterpret_cast<ImageCodecInfo*>(imageCodecInfo.get());
 
-    std::shared_ptr<ImageCodecInfo> imageCodecInfo(
-        reinterpret_cast<ImageCodecInfo*>(new char[size]));
+        GetImageEncoders(num, size, pImageCodecInfo);
 
-    GetImageEncoders(num, size, imageCodecInfo.get());
-
-    for (unsigned i = 0; i < num; ++i)
-    {
-        if (format == imageCodecInfo.get()[i].MimeType)
-        {
-            clsid = imageCodecInfo.get()[i].Clsid;
-            return i;
+        for (size_t i = 0; i < num; ++i) {
+            if (format == pImageCodecInfo[i].MimeType) {
+                clsid = pImageCodecInfo[i].Clsid;
+                return true;
+            }
         }
     }
 
-    return -1;
+    return false;
 }
 
 // Look at the header whether PNG image check (once)
-bool IsPngFiles(const string& fileName)
-{
+bool IsPngFiles(const string& fileName) {
     const uint8_t pngHeader[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
     const size_t pngHeaderSize = sizeof(pngHeader) / sizeof(*pngHeader);
 
     char readHeader[pngHeaderSize];
 
     std::ifstream ifs(fileName.c_str(), std::ios_base::in | std::ios_base::binary);
-    if (!ifs.fail())
-    {
+    if (!ifs.fail()) {
         ifs.read(readHeader, pngHeaderSize);
     }
 
     // compare
-    if (memcmp(pngHeader, readHeader, sizeof(pngHeader)) != 0)
-    {
+    if (memcmp(pngHeader, readHeader, sizeof(pngHeader)) != 0) {
         return false;
     }
 
@@ -66,8 +63,7 @@ bool IsPngFiles(const string& fileName)
 }
 
 // I open a browser (char *) URL that is specified
-void ExecUrl(const string& url)
-{
+void ExecUrl(const string& url) {
     // Run the open command
     SHELLEXECUTEINFO lsw = {};
     lsw.cbSize = sizeof(SHELLEXECUTEINFO);
@@ -78,8 +74,7 @@ void ExecUrl(const string& url)
 }
 
 // Copy text to clipboard
-void SetClipBoardText(const string& text)
-{
+void SetClipBoardText(const string& text) {
     size_t slen = text.size() + 1;
 
     HGLOBAL hText = GlobalAlloc(
@@ -109,53 +104,39 @@ void SetClipBoardText(const string& text)
 }
 
 // Save Image class data to file
-bool ImageToPng(Image* image, const string& fileName)
-{
-    bool result = false;
-
-    if (image->GetLastStatus() == 0)
-    {
+bool ImageToPng(Image* image, const string& fileName) {
+    if (image->GetLastStatus() == 0) {
         CLSID clsidEncoder;
-        if (GetEncoderClsid(L"image/png", clsidEncoder) != -1)
-        {
-            if (image->Save(fileName.c_str(), &clsidEncoder, 0) == 0)
-            {
-                result = true;
+        if (GetEncoderClsid(L"image/png", clsidEncoder)) {
+            if (image->Save(fileName.c_str(), &clsidEncoder, 0) == 0) {
+                return true;
             }
         }
     }
 
-    return result;
+    return false;
 }
 
 // Convert to PNG format
-bool ConvertPng(const string& destFile, const string& srcFile)
-{
-    // Initialization GDI+
+bool FileToPng(const string& destFile, const string& srcFile) {
     const GdiScopeInit& gpi = GdiScopeInit();
 
-    std::shared_ptr<Image> image(new Image(srcFile.c_str(), 0));
+    Image image(srcFile.c_str(), 0);
 
-    bool result = ImageToPng(image.get(), destFile);
-
-    return result;
+    return ImageToPng(&image, destFile);
 }
 
 // save BITMAP to PNG file
-bool SavePng(HBITMAP hBmp, const string& fileName)
-{
+bool BitmapToPng(HBITMAP hBmp, const string& fileName) {
     const GdiScopeInit& gpi = GdiScopeInit();
 
-    std::shared_ptr<Bitmap> bitmap(new Bitmap(hBmp, NULL));
+    Bitmap bitmap(hBmp, NULL);
 
-    bool result = ImageToPng(bitmap.get(), fileName);
-
-    return result;
+    return ImageToPng(&bitmap, fileName);
 }
 
-bool UploadFile(const string& fileName)
-{
-    std::ostringstream buf;	// Outgoing messages
+bool UploadFile(const string& fileName) {
+    std::ostringstream buf; // Outgoing messages
 
     // Get an ID
     string tidStr = GetId();
@@ -178,20 +159,17 @@ bool UploadFile(const string& fileName)
     buf << sCrLf;
     buf << sContentData;
     buf << sCrLf;
-    //buf << "Content-type: image/png";	// 一応
-    //buf << sCrLf;
     buf << sCrLf;
 
     // Read a PNG file
     std::ifstream png;
     png.open(fileName, std::ios::binary);
-    if (png.fail())
-    {
+    if (png.fail()) {
         png.close();
         ErrorMessage(ERROR_OPEN_PNG);
         return false;
     }
-    buf << png.rdbuf();		// read all & append to buffer
+    buf << png.rdbuf();     // read all & append to buffer
     png.close();
 
     // Last
@@ -206,13 +184,12 @@ bool UploadFile(const string& fileName)
 
     // WinInet preparation (proxy required Full setをはuse)
     HINTERNET hSession = InternetOpen(
-        szTitle, 
+        sTitle, 
         INTERNET_OPEN_TYPE_PRECONFIG, 
         NULL, 
         NULL, 
         0);
-    if (hSession == NULL)
-    {
+    if (hSession == NULL) {
         ErrorMessage(ERROR_WININET_CONFIGURE);
         return false;
     }
@@ -227,8 +204,7 @@ bool UploadFile(const string& fileName)
         INTERNET_SERVICE_HTTP, 
         0, 
         NULL);
-    if (hSession == NULL)
-    {
+    if (hSession == NULL) {
         ErrorMessage(ERROR_CONNECTION_INIT);
         return false;
     }
@@ -243,8 +219,7 @@ bool UploadFile(const string& fileName)
         NULL, 
         INTERNET_FLAG_DONT_CACHE | INTERNET_FLAG_RELOAD, 
         NULL);
-    if (hRequest == NULL)
-    {
+    if (hRequest == NULL) {
         ErrorMessage(ERROR_COMPOSE_POST);
         return false;
     }
@@ -255,8 +230,7 @@ bool UploadFile(const string& fileName)
         GYAZO_USER_AGENT, 
         wcslen(GYAZO_USER_AGENT), 
         HTTP_ADDREQ_FLAG_ADD | HTTP_ADDREQ_FLAG_REPLACE);
-    if (bResult == FALSE)
-    {
+    if (bResult == FALSE) {
         ErrorMessage(ERROR_SET_USER_AGENT);
         return false;
     }
@@ -267,8 +241,7 @@ bool UploadFile(const string& fileName)
         lstrlen(GYAZO_HEADER),
         (LPVOID)msg.c_str(),
         (DWORD) msg.length());
-    if (bResult == TRUE)
-    {
+    if (bResult == TRUE) {
         // Success requiresは
 
         DWORD nResponse = 8;
@@ -281,13 +254,11 @@ bool UploadFile(const string& fileName)
             response, 
             &nResponse, 
             0);
-        if (_wtoi(response) != 200)
-        {
+        if (_wtoi(response) != 200) {
             // upload 失敗 (status error)
             ErrorMessage(ERROR_UPLOAD_IMAGE);
         }
-        else
-        {
+        else {
             // Upload succeeded
 
             // Get new id
@@ -303,8 +274,7 @@ bool UploadFile(const string& fileName)
                 &nId, 
                 0);
             if (GetLastError() != ERROR_HTTP_HEADER_NOT_FOUND 
-                && nId != 0)
-            {
+                && nId != 0) {
                 // Save new id
                 SaveId(id);
             }
@@ -316,8 +286,7 @@ bool UploadFile(const string& fileName)
 
             // Never so long , but once well
             while (InternetReadFile(hRequest, (LPVOID) url, 1024, &nUrl) == TRUE
-                && nUrl != 0)
-            {
+                && nUrl != 0) {
                 srcUrl.append(url, url + nUrl);
             }
 
@@ -335,8 +304,7 @@ bool UploadFile(const string& fileName)
             return true;
         }
     }
-    else
-    {
+    else {
         // Upload failed
         ErrorMessage(ERROR_UPLOAD_FAILED);
         return false;
@@ -346,28 +314,24 @@ bool UploadFile(const string& fileName)
 }
 
 // I generate load the ID
-string GetId()
-{
+string GetId() {
     // load ID from the file
     std::wifstream ifs;
     string sId;
 
     ifs.open(GetIdFilePath());
-    if (!ifs.fail())
-    {
+    if (!ifs.fail()) {
         // read the ID
         ifs >> sId;
         ifs.close();
     }
-    else
-    {
-        // (Compatibility with older versions) to read the ID from the same directory
+    else {
+        // (Compatibility with older versions) read the ID from the same directory
         string idFile = GYAZO_ID_FILENAME;
 
         ifs.close();
         ifs.open(idFile);
-        if (!ifs.fail())
-        {
+        if (!ifs.fail()) {
             ifs >> sId;
             ifs.close();
         }
@@ -377,44 +341,37 @@ string GetId()
 }
 
 // Save ID
-bool SaveId(const string& sId)
-{
+bool SaveId(const string& sId) {
     // save the ID to file
     CreateDirectory(GetIdDirPath().c_str(), NULL);
 
     std::wofstream ofs;
     ofs.open(GetIdFilePath());
-    if (!ofs.fail())
-    {
+    if (!ofs.fail()) {
         ofs << sId;
         ofs.close();
 
         // Delete the old configuration file
 
-        if (PathFileExists(GYAZO_ID_FILENAME))
-        {
+        if (PathFileExists(GYAZO_ID_FILENAME)) {
             DeleteFile(GYAZO_ID_FILENAME);
         }
     }
-    else
-    {
+    else {
         return false;
     }
 
     return true;
 }
 
-int ErrorMessage(const string& text)
-{
-    return MessageBox(NULL, text.c_str(), szTitle, MB_ICONERROR | MB_OK);
+int ErrorMessage(const string& text) {
+    return MessageBox(NULL, text.c_str(), sTitle, MB_ICONERROR | MB_OK);
 }
 
-string GetIdDirPath()
-{
+string GetIdDirPath() {
     static TCHAR idDir[MAX_PATH] = {};
 
-    if (*idDir == TCHAR(0))
-    {
+    if (*idDir == TCHAR(0)) {
         SHGetSpecialFolderPath(
             NULL, 
             idDir, 
@@ -426,12 +383,10 @@ string GetIdDirPath()
     return idDir;
 }
 
-string GetIdFilePath()
-{
+string GetIdFilePath() {
     static string idFile;
 
-    if (!idFile.length())
-    {
+    if (!idFile.length()) {
         idFile = GetIdDirPath() + GYAZO_ID_FILEPATH;
     }
 
