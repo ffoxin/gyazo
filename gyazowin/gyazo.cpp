@@ -8,7 +8,6 @@
 // System headers
 #include <windows.h>
 #include <Shlwapi.h>
-#include <tchar.h>
 
 // Project headers
 #include "font.h"
@@ -42,22 +41,22 @@ void                DrawCoordinates(HDC hdc, LPRECT newRect);
 int                 DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText);
 
 // Entry point
-int APIENTRY _tWinMain(HINSTANCE hInstance,
+int APIENTRY wWinMain(HINSTANCE hInstance,
                        HINSTANCE,
                        LPTSTR,
                        int nCmdShow) {
     MSG msg;
 
     // Change working directory to app directory
-    TCHAR szThisPath[MAX_PATH];
-    GetModuleFileName(NULL, szThisPath, MAX_PATH);
-    PathRemoveFileSpec(szThisPath);
-    SetCurrentDirectory(szThisPath);
+    wchar_t appPath[MAX_PATH];
+    GetModuleFileNameW(NULL, appPath, MAX_PATH);
+    PathRemoveFileSpecW(appPath);
+    SetCurrentDirectoryW(appPath);
 
     // Upload file if it specified as an argument
     if (__argc == 2) {
         // Exit by file upload
-        string fileArg = __targv[1];
+        string fileArg = __wargv[1];
         if (!IsPngFiles(fileArg)) {
 
         }
@@ -67,9 +66,9 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
         }
         else {
             // Convert to PNG format
-            TCHAR tmpDir[MAX_PATH], tmpFile[MAX_PATH];
-            GetTempPath(MAX_PATH, tmpDir);
-            GetTempFileName(tmpDir, GYAZO_PREFIX, 0, tmpFile);
+            wchar_t tmpDir[MAX_PATH], tmpFile[MAX_PATH];
+            GetTempPathW(MAX_PATH, tmpDir);
+            GetTempFileNameW(tmpDir, GYAZO_PREFIX, 0, tmpFile);
 
             if (FileToPng(tmpFile, fileArg)) {
                 //Upload
@@ -79,7 +78,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                 // Can not be converted into PNG
                 ErrorMessage(ERROR_CONVERT_IMAGE);
             }
-            DeleteFile(tmpFile);
+            DeleteFileW(tmpFile);
         }
         return TRUE;
     }
@@ -93,9 +92,9 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     }
 
     // Main message loop :
-    while (GetMessage(&msg, NULL, 0, 0)) {
+    while (GetMessageW(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
-        DispatchMessage(&msg);
+        DispatchMessageW(&msg);
     }
 
     return (int) msg.wParam;
@@ -112,13 +111,13 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance) {
     wc.cbClsExtra       = 0;
     wc.cbWndExtra       = 0;
     wc.hInstance        = hInstance;
-    wc.hIcon            = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-    wc.hCursor          = LoadCursor(NULL, IDC_CROSS);    // + Cursor
+    wc.hIcon            = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wc.hCursor          = LoadCursorW(NULL, IDC_CROSS);    // + Cursor
     wc.hbrBackground    = 0;                            // Background
     wc.lpszMenuName     = 0;
     wc.lpszClassName    = sWindowMainClass;
 
-    result = RegisterClass(&wc);
+    result = RegisterClassW(&wc);
     if (result == 0) {
         return 0;
     }
@@ -129,13 +128,13 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance) {
     wc.cbClsExtra       = 0;
     wc.cbWndExtra       = 0;
     wc.hInstance        = hInstance;
-    wc.hIcon            = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-    wc.hCursor          = LoadCursor(NULL, IDC_CROSS);    // + Cursor
+    wc.hIcon            = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wc.hCursor          = LoadCursorW(NULL, IDC_CROSS);    // + Cursor
     wc.hbrBackground    = (HBRUSH) GetStockObject(WHITE_BRUSH);
     wc.lpszMenuName     = 0;
     wc.lpszClassName    = sWindowLayerClass;
 
-    result = RegisterClass(&wc);
+    result = RegisterClassW(&wc);
     if (result == 0) {
         return 0;
     }
@@ -146,13 +145,13 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance) {
     wc.cbClsExtra       = 0;
     wc.cbWndExtra       = 0;
     wc.hInstance        = hInstance;
-    wc.hIcon            = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-    wc.hCursor          = LoadCursor(NULL, IDC_CROSS);    // + Cursor
+    wc.hIcon            = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wc.hCursor          = LoadCursorW(NULL, IDC_CROSS);    // + Cursor
     wc.hbrBackground    = (HBRUSH) GetStockObject(BLACK_BRUSH);
     wc.lpszMenuName     = 0;
     wc.lpszClassName    = sWindowCursorClass;
 
-    result = RegisterClass(&wc);
+    result = RegisterClassW(&wc);
     if (result == 0) {
         return 0;
     }
@@ -169,7 +168,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow) {
     screenSize.cx = GetSystemMetrics(SM_CXVIRTUALSCREEN);
     screenSize.cy = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-    hWnd = CreateWindowEx(
+    hWnd = CreateWindowExW(
         WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_TOPMOST
 #if (_WIN32_WINNT >= 0x0500)
         | WS_EX_NOACTIVATE
@@ -195,7 +194,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow) {
     SetTimer(hWnd, 1, 100, NULL);
 
     // You can layer window
-    hClipWnd = CreateWindowEx(
+    hClipWnd = CreateWindowExW(
         WS_EX_TOOLWINDOW
 #if (_WIN32_WINNT >= 0x0500)
         | WS_EX_LAYERED | WS_EX_NOACTIVATE
@@ -207,7 +206,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow) {
 
     SetLayeredWindowAttributes(hClipWnd, RGB(255, 0, 0), 100, LWA_COLORKEY | LWA_ALPHA);
 
-    hCursorWnd = CreateWindowEx(
+    hCursorWnd = CreateWindowExW(
         WS_EX_TOOLWINDOW
 #if (_WIN32_WINNT >= 0x0500)
         | WS_EX_LAYERED | WS_EX_NOACTIVATE
@@ -295,13 +294,13 @@ int DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText) {
     int result;
 
     SetTextColor(hdc, RGB(0, 0, 0));
-    result = TextOut(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
+    result = TextOutW(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
     if (result == 0) {
         return result;
     }
 
     SetTextColor(hdc, RGB(255, 255, 255));
-    result = TextOut(hdc, textPos.cx, textPos.cy, sText, nText);
+    result = TextOutW(hdc, textPos.cx, textPos.cy, sText, nText);
     if (result == 0) {
         return result;
     }
@@ -309,64 +308,66 @@ int DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText) {
     return result;
 }
 
+void EraseBackgroundLayer(const HWND& hWnd)
+{
+    GyazoRect winRect;
+    GetWindowRect(hWnd, winRect);
+    GyazoSize clipSize = winRect;
+
+    HDC hdc = GetDC(hWnd);
+    HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
+    SelectObject(hdc, hBrush);
+    HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
+    SelectObject(hdc, hPen);
+    Rectangle(hdc, 0, 0, clipSize.cx, clipSize.cy);
+
+    // The output size of the rectangle
+    int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+    SelectObject(hdc, GyazoFont::GetFont(fontHeight));
+
+    SetBkMode(hdc, TRANSPARENT);
+
+    GyazoSize textSize, textPos;
+    wchar_t sText[100];
+    size_t nText;
+
+    // Draw top left coordinates (top left corner)
+    swprintf_s(sText, GYAZO_POINT_FORMAT, winRect.left, winRect.top);
+    nText = wcslen(sText);
+    textPos = clipWinTextBorder;
+
+    DrawLabel(hdc, textPos, sText, nText);
+
+    // Draw bottom right coordinates (bottom right corner)
+    swprintf_s(sText, GYAZO_POINT_FORMAT, winRect.right, winRect.bottom);
+    nText = wcslen(sText);
+    GetTextExtentPointW(hdc, sText, nText, textSize);
+    textPos = clipSize - textSize - clipWinTextBorder;
+
+    DrawLabel(hdc, textPos, sText, nText);
+
+    // Draw crop size (center)
+    swprintf_s(sText, GYAZO_POINT_FORMAT, clipSize.cx, clipSize.cy);
+    nText = wcslen(sText);
+    GetTextExtentPointW(hdc, sText, nText, textSize);
+    textPos.cx = (clipSize.cx - textSize.cx) / 2;
+    textPos.cy = (clipSize.cy - textSize.cy) / 2;
+
+    DrawLabel(hdc, textPos, sText, nText);
+
+    // Release resources
+    DeleteObject(hPen);
+    DeleteObject(hBrush);
+    GyazoFont::Release();
+    ReleaseDC(hWnd, hdc);
+}
+
 // Layer window procedure
 LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
-    case WM_ERASEBKGND: {
-            GyazoRect winRect;
-            GetWindowRect(hWnd, winRect);
-            GyazoSize clipSize = winRect;
-
-            HDC hdc = GetDC(hWnd);
-            HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
-            SelectObject(hdc, hBrush);
-            HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
-            SelectObject(hdc, hPen);
-            Rectangle(hdc, 0, 0, clipSize.cx, clipSize.cy);
-
-            // The output size of the rectangle
-            int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-            SelectObject(hdc, GyazoFont::GetFont(fontHeight));
-
-            SetBkMode(hdc, TRANSPARENT);
-
-            GyazoSize textSize, textPos;
-            TCHAR sText[100];
-            size_t nText;
-
-            // Draw top left coordinates (top left corner)
-            _stprintf_s(sText, GYAZO_POINT_FORMAT, winRect.left, winRect.top);
-            nText = _tcslen(sText);
-            textPos = clipWinTextBorder;
-
-            DrawLabel(hdc, textPos, sText, nText);
-
-            // Draw bottom right coordinates (bottom right corner)
-            _stprintf_s(sText, GYAZO_POINT_FORMAT, winRect.right, winRect.bottom);
-            nText = _tcslen(sText);
-            GetTextExtentPoint(hdc, sText, nText, textSize);
-            textPos = clipSize - textSize - clipWinTextBorder;
-
-            DrawLabel(hdc, textPos, sText, nText);
-
-            // Draw crop size (center)
-            _stprintf_s(sText, GYAZO_POINT_FORMAT, clipSize.cx, clipSize.cy);
-            nText = _tcslen(sText);
-            GetTextExtentPoint(hdc, sText, nText, textSize);
-            textPos.cx = (clipSize.cx - textSize.cx) / 2;
-            textPos.cy = (clipSize.cy - textSize.cy) / 2;
-
-            DrawLabel(hdc, textPos, sText, nText);
-
-            // Release resources
-            DeleteObject(hPen);
-            DeleteObject(hBrush);
-            GyazoFont::Release();
-            ReleaseDC(hWnd, hdc);
-
-            return TRUE;
-        }
-        break;
+    case WM_ERASEBKGND:
+        EraseBackgroundLayer(hWnd);
+        return TRUE;
 
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
@@ -375,7 +376,7 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     return FALSE;
 }
 
-void EraseBackground(const HWND& hWnd) {
+void EraseBackgroundCursor(const HWND& hWnd) {
     HDC hdc = GetDC(hWnd);
     HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
     SelectObject(hdc, hBrush);
@@ -390,12 +391,12 @@ void EraseBackground(const HWND& hWnd) {
     SetBkMode(hdc, TRANSPARENT);
 
     GyazoSize textPos;
-    TCHAR sText[100];
+    wchar_t sText[100];
 
     // Draw mouse coordinates
     swprintf(sText, sizeof(sText), GYAZO_POINT_FORMAT, cursorPos.cx, cursorPos.cy);
-    size_t nText = _tcslen(sText);
-    GetTextExtentPoint(hdc, sText, nText, cursorTextSize);
+    size_t nText = wcslen(sText);
+    GetTextExtentPointW(hdc, sText, nText, cursorTextSize);
     textPos.cx = 2;
     textPos.cy = 0;
 
@@ -412,11 +413,11 @@ void EraseBackground(const HWND& hWnd) {
 LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
     case WM_ERASEBKGND:
-        EraseBackground(hWnd);
+        EraseBackgroundCursor(hWnd);
         return TRUE;
 
     default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return DefWindowProcW(hWnd, message, wParam, lParam);
     }
 
     return FALSE;
@@ -460,13 +461,13 @@ void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
     BitBlt(newDC, 0, 0, imageSize.cx, imageSize.cy, 
         hdc, clipRect.left, clipRect.top, SRCCOPY);
 
-    // I hide the window !
+    // Hide the window
     ShowWindow(hWnd, SW_HIDE);
 
     // The determination of the temporary file name
-    TCHAR tmpDir[MAX_PATH], tmpFile[MAX_PATH];
-    GetTempPath(MAX_PATH, tmpDir);
-    GetTempFileName(tmpDir, GYAZO_PREFIX, 0, tmpFile);
+    wchar_t tmpDir[MAX_PATH], tmpFile[MAX_PATH];
+    GetTempPathW(MAX_PATH, tmpDir);
+    GetTempFileNameW(tmpDir, GYAZO_PREFIX, 0, tmpFile);
 
     if (BitmapToPng(newBMP, tmpFile)) {
         UploadFile(tmpFile);
@@ -477,7 +478,7 @@ void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
     }
 
     // Clean up
-    DeleteFile(tmpFile);
+    DeleteFileW(tmpFile);
 
     DeleteDC(newDC);
     DeleteObject(newBMP);
@@ -496,13 +497,13 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     case WM_RBUTTONDOWN:
         // Cancellation
         DestroyWindow(hWnd);
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return DefWindowProcW(hWnd, message, wParam, lParam);
 
     case WM_TIMER:
         // Detection of the ESC key is pressed
         if (GetKeyState(VK_ESCAPE) & 0x8000) {
             DestroyWindow(hWnd);
-            return DefWindowProc(hWnd, message, wParam, lParam);
+            return DefWindowProcW(hWnd, message, wParam, lParam);
         }
         break;
 
@@ -514,19 +515,19 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
         if (isClip) {
             // Set the new coordinate
-            clipRect.right    = cursorPos.cx;
-            clipRect.bottom    = cursorPos.cy;
+            clipRect.right  = cursorPos.cx;
+            clipRect.bottom = cursorPos.cy;
 
             DrawRubberband(hdc, clipRect);
         }
         else {
-            cursorWinRect.left      = cursorPos.cx + cursorWinOffset.cx;
-            cursorWinRect.top       = cursorPos.cy + cursorWinOffset.cy;
-            cursorWinRect.right     = cursorTextSize.cx + 4;
-            cursorWinRect.bottom    = cursorTextSize.cy;
+            cursorWinRect.left   = cursorPos.cx + cursorWinOffset.cx;
+            cursorWinRect.top    = cursorPos.cy + cursorWinOffset.cy;
+            cursorWinRect.right  = cursorTextSize.cx + 4;
+            cursorWinRect.bottom = cursorTextSize.cy;
 
             DrawCoordinates(hdc, cursorWinRect);
-            SendMessage(hCursorWnd, WM_ERASEBKGND, NULL, NULL);
+            SendMessageW(hCursorWnd, WM_ERASEBKGND, NULL, NULL);
         }
 
         ReleaseDC(NULL, hdc);
@@ -548,30 +549,29 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         ReleaseDC(NULL, hdc);
 
         // Set the initial position
-        clipRect.left    = LOWORD(lParam) + screenOffset.cx;
-        clipRect.top    = HIWORD(lParam) + screenOffset.cy;
+        clipRect.left = LOWORD(lParam) + screenOffset.cx;
+        clipRect.top  = HIWORD(lParam) + screenOffset.cy;
 
         // Capture the mouse
         SetCapture(hWnd);
         break;
 
-    case WM_LBUTTONUP: {
-            // Clip end
-            isClip = false;
+    case WM_LBUTTONUP:
+        // Clip end
+        isClip = false;
 
-            // And release the mouse capture
-            ReleaseCapture();
+        // And release the mouse capture
+        ReleaseCapture();
 
-            // Set the new coordinate
-            clipRect.right    = LOWORD(lParam) + screenOffset.cx;
-            clipRect.bottom    = HIWORD(lParam) + screenOffset.cy;
+        // Set the new coordinate
+        clipRect.right  = LOWORD(lParam) + screenOffset.cx;
+        clipRect.bottom = HIWORD(lParam) + screenOffset.cy;
 
-            // Screen ni direct drawing,っte -shaped
-            SaveAndUpload(hWnd, clipRect);
+        // Screen ni direct drawing,っte -shaped
+        SaveAndUpload(hWnd, clipRect);
 
-            DestroyWindow(hWnd);
-            PostQuitMessage(0);
-        }
+        DestroyWindow(hWnd);
+        PostQuitMessage(0);
         break;
 
     case WM_DESTROY:
@@ -579,9 +579,8 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         break;
 
     default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return DefWindowProcW(hWnd, message, wParam, lParam);
     }
 
     return 0;
 }
-

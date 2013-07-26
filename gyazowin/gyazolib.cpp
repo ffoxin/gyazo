@@ -1,14 +1,13 @@
-﻿// STL headers
-#include <memory>
-
-// System headers
+﻿// System headers
 #include <ShlObj.h>
 #include <Shlwapi.h>
 #include <WinInet.h>
 
 // STL headers
 #include <fstream>
+#include <memory>
 #include <sstream>
+#include <string>
 
 // Project headers
 #include "gdiinit.h"
@@ -70,7 +69,7 @@ void ExecUrl(const string& url) {
     lsw.lpVerb = GYAZO_URL_OPEN;
     lsw.lpFile = url.c_str();
 
-    ShellExecuteEx(&lsw);
+    ShellExecuteExW(&lsw);
 }
 
 // Copy text to clipboard
@@ -83,20 +82,13 @@ void SetClipBoardText(const string& text) {
         );
 
     char_type* pText = (char_type *) GlobalLock(hText);
-    wcscpy(pText, text.c_str());
+    wcscpy_s(pText, slen, text.c_str());
     GlobalUnlock(hText);
 
     // I open the clipboard
     OpenClipboard(NULL);
     EmptyClipboard();
-    SetClipboardData(
-#ifdef UNICODE
-        CF_UNICODETEXT
-#else
-        CF_TEXT
-#endif
-        , 
-        hText);
+    SetClipboardData(CF_UNICODETEXT, hText);
     CloseClipboard();
 
     // Liberation
@@ -183,7 +175,7 @@ bool UploadFile(const string& fileName) {
     std::string msg(buf.str());
 
     // WinInet preparation (proxy required Full setをはuse)
-    HINTERNET hSession = InternetOpen(
+    HINTERNET hSession = InternetOpenW(
         sTitle, 
         INTERNET_OPEN_TYPE_PRECONFIG, 
         NULL, 
@@ -195,7 +187,7 @@ bool UploadFile(const string& fileName) {
     }
 
     // Access point
-    HINTERNET hConnection = InternetConnect(
+    HINTERNET hConnection = InternetConnectW(
         hSession, 
         GYAZO_UPLOAD_SERVER, 
         INTERNET_DEFAULT_HTTP_PORT,
@@ -210,7 +202,7 @@ bool UploadFile(const string& fileName) {
     }
 
     // Full set requirements before
-    HINTERNET hRequest = HttpOpenRequest(
+    HINTERNET hRequest = HttpOpenRequestW(
         hConnection,
         GYAZO_POST, 
         GYAZO_UPLOAD_PATH, 
@@ -225,7 +217,7 @@ bool UploadFile(const string& fileName) {
     }
 
     // User Agentを 指定
-    BOOL bResult = HttpAddRequestHeaders(
+    BOOL bResult = HttpAddRequestHeadersW(
         hRequest, 
         GYAZO_USER_AGENT, 
         wcslen(GYAZO_USER_AGENT), 
@@ -235,39 +227,36 @@ bool UploadFile(const string& fileName) {
         return false;
     }
 
-    // Requirementsをmessenger
-    bResult = HttpSendRequest(hRequest,
+    bResult = HttpSendRequestW(hRequest,
         GYAZO_HEADER,
-        lstrlen(GYAZO_HEADER),
+        wcslen(GYAZO_HEADER),
         (LPVOID)msg.c_str(),
         (DWORD) msg.length());
     if (bResult == TRUE) {
-        // Success requiresは
-
         DWORD nResponse = 8;
-        TCHAR response[8];
+        wchar_t response[8];
 
-        // state codeを 取得
-        HttpQueryInfo(
+        // state code
+        HttpQueryInfoW(
             hRequest, 
             HTTP_QUERY_STATUS_CODE, 
             response, 
             &nResponse, 
             0);
-        if (_wtoi(response) != 200) {
-            // upload 失敗 (status error)
+        if (std::stoi(response) != 200) {
+            // upload error
             ErrorMessage(ERROR_UPLOAD_IMAGE);
         }
         else {
-            // Upload succeeded
+            // upload succeeded
 
-            // Get new id
+            // get new id
             DWORD nId = 100;
-            TCHAR id[100];
+            wchar_t id[100];
 
-            wcscpy(id, GYAZO_ID);
+            wcscpy_s(id, GYAZO_ID);
 
-            HttpQueryInfo(
+            HttpQueryInfoW(
                 hRequest, 
                 HTTP_QUERY_CUSTOM, 
                 id, 
@@ -290,10 +279,8 @@ bool UploadFile(const string& fileName) {
                 srcUrl.append(url, url + nUrl);
             }
 
-            string cache = L"cache.";
-            string gyazo = L"gyazo";
-            srcUrl.insert(srcUrl.find(gyazo), cache);
-            srcUrl += L".png";
+            srcUrl.insert(srcUrl.find(Text("gyazo")), Text("cache."));
+            srcUrl += Text(".png");
 
             // Copy the URL to the clipboard
             SetClipBoardText(srcUrl);
@@ -343,7 +330,7 @@ string GetId() {
 // Save ID
 bool SaveId(const string& sId) {
     // save the ID to file
-    CreateDirectory(GetIdDirPath().c_str(), NULL);
+    CreateDirectoryW(GetIdDirPath().c_str(), NULL);
 
     std::wofstream ofs;
     ofs.open(GetIdFilePath());
@@ -353,8 +340,8 @@ bool SaveId(const string& sId) {
 
         // Delete the old configuration file
 
-        if (PathFileExists(GYAZO_ID_FILENAME)) {
-            DeleteFile(GYAZO_ID_FILENAME);
+        if (PathFileExistsW(GYAZO_ID_FILENAME)) {
+            DeleteFileW(GYAZO_ID_FILENAME);
         }
     }
     else {
@@ -365,19 +352,19 @@ bool SaveId(const string& sId) {
 }
 
 int ErrorMessage(const string& text) {
-    return MessageBox(NULL, text.c_str(), sTitle, MB_ICONERROR | MB_OK);
+    return MessageBoxW(NULL, text.c_str(), sTitle, MB_ICONERROR | MB_OK);
 }
 
 string GetIdDirPath() {
-    static TCHAR idDir[MAX_PATH] = {};
+    static wchar_t idDir[MAX_PATH] = {};
 
-    if (*idDir == TCHAR(0)) {
-        SHGetSpecialFolderPath(
+    if (*idDir == wchar_t(0)) {
+        SHGetSpecialFolderPathW(
             NULL, 
             idDir, 
             CSIDL_APPDATA, 
             FALSE);
-        wcscat(idDir, GYAZO_DIRNAME);
+        wcscat_s(idDir, GYAZO_DIRNAME);
     }
 
     return idDir;

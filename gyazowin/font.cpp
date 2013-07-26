@@ -21,7 +21,7 @@ HFONT GyazoFont::GetFont(int fontHeight) {
 GyazoFont::GyazoFont(int fontHeight) {
     m_fontHeight = fontHeight;
 
-    m_font = CreateFont(
+    m_font = CreateFontW(
         (-1) * fontHeight,  // Font height
         0,                  // Text parcels
         0,                  // Angle of text
