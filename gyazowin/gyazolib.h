@@ -10,7 +10,7 @@ using namespace Gdiplus;
 #include "types.h"
 
 bool    GetEncoderClsid(const string& format, CLSID& clsid);
-bool    IsPngFiles(const string& fileName);
+bool    IsPngFile(const string& fileName);
 void    ExecUrl(const string& url);
 void    SetClipBoardText(const string& text);
 bool    ImageToPng(Image* image, const string& fileName);

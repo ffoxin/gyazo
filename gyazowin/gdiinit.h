@@ -6,10 +6,10 @@
 #include <gdiplus.h>
 using namespace Gdiplus;
 
-class GdiScopeInit {
+class GdiInit {
 public:
-    GdiScopeInit();
-    ~GdiScopeInit();
+    GdiInit();
+    ~GdiInit();
 
 private:
     GdiplusStartupInput     m_startupInput;

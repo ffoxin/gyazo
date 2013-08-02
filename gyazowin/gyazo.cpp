@@ -41,10 +41,10 @@ void                DrawCoordinates(HDC hdc, LPRECT newRect);
 int                 DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText);
 
 // Entry point
-int APIENTRY wWinMain(HINSTANCE hInstance,
-                       HINSTANCE,
-                       LPTSTR,
-                       int nCmdShow) {
+int APIENTRY wWinMain(HINSTANCE hInstance, 
+                      HINSTANCE, 
+                      LPTSTR, 
+                      int nCmdShow) {
     MSG msg;
 
     // Change working directory to app directory
@@ -57,10 +57,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
     if (__argc == 2) {
         // Exit by file upload
         string fileArg = __wargv[1];
-        if (!IsPngFiles(fileArg)) {
+        if (!IsPngFile(fileArg)) {
 
         }
-        if (IsPngFiles(fileArg)) {
+        if (IsPngFile(fileArg)) {
             // PNG to upload directly
             UploadFile(fileArg);
         }

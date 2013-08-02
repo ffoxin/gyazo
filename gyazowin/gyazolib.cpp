@@ -25,7 +25,8 @@ bool GetEncoderClsid(const string& format, CLSID& clsid) {
     if (size != 0) {
         std::shared_ptr<char> imageCodecInfo(
             new char[size], 
-            [](char* p){ delete[] p; });
+            [](char* p){ delete[] p; } // deleter functor
+        );
         ImageCodecInfo* pImageCodecInfo = reinterpret_cast<ImageCodecInfo*>(imageCodecInfo.get());
 
         GetImageEncoders(num, size, pImageCodecInfo);
@@ -42,19 +43,24 @@ bool GetEncoderClsid(const string& format, CLSID& clsid) {
 }
 
 // Look at the header whether PNG image check (once)
-bool IsPngFiles(const string& fileName) {
+bool IsPngFile(const string& fileName) {
     const uint8_t pngHeader[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
     const size_t pngHeaderSize = sizeof(pngHeader) / sizeof(*pngHeader);
 
-    char readHeader[pngHeaderSize];
+    uint8_t fileHeader[pngHeaderSize];
 
     std::ifstream ifs(fileName.c_str(), std::ios_base::in | std::ios_base::binary);
-    if (!ifs.fail()) {
-        ifs.read(readHeader, pngHeaderSize);
+    if (!ifs.is_open()) {
+        return false;
+    }
+
+    ifs.read(reinterpret_cast<char *>(fileHeader), pngHeaderSize);
+    if (!ifs.good()) {
+        return false;
     }
 
     // compare
-    if (memcmp(pngHeader, readHeader, sizeof(pngHeader)) != 0) {
+    if (memcmp(pngHeader, fileHeader, sizeof(pngHeader)) != 0) {
         return false;
     }
 
@@ -81,7 +87,7 @@ void SetClipBoardText(const string& text) {
         slen * sizeof(char_type)
         );
 
-    char_type* pText = (char_type *) GlobalLock(hText);
+    char_type* pText = static_cast<char_type *>(GlobalLock(hText));
     wcscpy_s(pText, slen, text.c_str());
     GlobalUnlock(hText);
 
@@ -111,7 +117,7 @@ bool ImageToPng(Image* image, const string& fileName) {
 
 // Convert to PNG format
 bool FileToPng(const string& destFile, const string& srcFile) {
-    const GdiScopeInit& gpi = GdiScopeInit();
+    const GdiInit gpi = GdiInit();
 
     Image image(srcFile.c_str(), 0);
 
@@ -120,7 +126,7 @@ bool FileToPng(const string& destFile, const string& srcFile) {
 
 // save BITMAP to PNG file
 bool BitmapToPng(HBITMAP hBmp, const string& fileName) {
-    const GdiScopeInit& gpi = GdiScopeInit();
+    const GdiInit gpi = GdiInit();
 
     Bitmap bitmap(hBmp, NULL);
 
@@ -274,12 +280,12 @@ bool UploadFile(const string& fileName) {
             string srcUrl;
 
             // Never so long , but once well
-            while (InternetReadFile(hRequest, (LPVOID) url, 1024, &nUrl) == TRUE
+            while (InternetReadFile(hRequest, url, 1024, &nUrl) == TRUE
                 && nUrl != 0) {
                 srcUrl.append(url, url + nUrl);
             }
 
-            srcUrl.insert(srcUrl.find(Text("gyazo")), Text("cache."));
+            srcUrl.insert(srcUrl.find(Text("gyazo.com")), Text("cache."));
             srcUrl += Text(".png");
 
             // Copy the URL to the clipboard
