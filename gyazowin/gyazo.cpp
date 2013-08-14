@@ -10,6 +10,7 @@
 #include <Shlwapi.h>
 
 // Project headers
+#include "exceptions.h"
 #include "font.h"
 #include "gyazolib.h"
 #include "resource.h"
@@ -30,7 +31,7 @@ GyazoSize screenOffset;             // virtual screen offset
 GyazoSize screenSize;               // virtual screen size
 
 // Declarations
-ATOM                RegisterGyazoClass(HINSTANCE);
+void RegisterGyazoClass(HINSTANCE);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProcMain(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK    WndProcClip(HWND, UINT, WPARAM, LPARAM);
@@ -41,10 +42,7 @@ void                DrawCoordinates(HDC hdc, LPRECT newRect);
 int                 DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText);
 
 // Entry point
-int APIENTRY wWinMain(HINSTANCE hInstance, 
-                      HINSTANCE, 
-                      LPTSTR, 
-                      int nCmdShow) {
+int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int nCmdShow) {
     MSG msg;
 
     // Change working directory to app directory
@@ -56,10 +54,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
     // Upload file if it specified as an argument
     if (__argc == 2) {
         // Exit by file upload
-        string fileArg = __wargv[1];
-        if (!IsPngFile(fileArg)) {
-
-        }
+        wstring fileArg = __wargv[1];
         if (IsPngFile(fileArg)) {
             // PNG to upload directly
             UploadFile(fileArg);
@@ -83,7 +78,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
         return TRUE;
     }
 
-    // To register a window class
+    // Register window classes
     RegisterGyazoClass(hInstance);
 
     // I run the application initialization :
@@ -101,9 +96,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
 }
 
 // To register a window class
-ATOM RegisterGyazoClass(HINSTANCE hInstance) {
+void RegisterGyazoClass(HINSTANCE) throw(ExRegisterClass) {
     WNDCLASS wc;
-    ATOM result;
 
     // Main window
     wc.style            = 0;                            // Do not send a WM_PAINT
@@ -117,9 +111,8 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance) {
     wc.lpszMenuName     = 0;
     wc.lpszClassName    = sWindowMainClass;
 
-    result = RegisterClassW(&wc);
-    if (result == 0) {
-        return 0;
+    if (RegisterClassW(&wc) == 0) {
+        throw ExRegisterClass(sWindowMainClass);
     }
 
     // Clip window
@@ -134,9 +127,8 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance) {
     wc.lpszMenuName     = 0;
     wc.lpszClassName    = sWindowLayerClass;
 
-    result = RegisterClassW(&wc);
-    if (result == 0) {
-        return 0;
+    if (RegisterClassW(&wc) == 0) {
+        throw ExRegisterClass(sWindowLayerClass);
     }
 
     // Cursor window
@@ -151,12 +143,9 @@ ATOM RegisterGyazoClass(HINSTANCE hInstance) {
     wc.lpszMenuName     = 0;
     wc.lpszClassName    = sWindowCursorClass;
 
-    result = RegisterClassW(&wc);
-    if (result == 0) {
-        return 0;
+    if (RegisterClassW(&wc) == 0) {
+        throw ExRegisterClass(sWindowCursorClass);
     }
-
-    return result;
 }
 
 BOOL InitInstance(HINSTANCE hInst, int nCmdShow) {
@@ -308,8 +297,7 @@ int DrawLabel(HDC hdc, const GyazoSize& textPos, LPCTSTR sText, int nText) {
     return result;
 }
 
-void EraseBackgroundLayer(const HWND& hWnd)
-{
+void EraseBackgroundLayer(const HWND& hWnd) {
     GyazoRect winRect;
     GetWindowRect(hWnd, winRect);
     GyazoSize clipSize = winRect;
@@ -423,8 +411,7 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
     return FALSE;
 }
 
-void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
-{
+void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect) {
     HDC hdc = GetDC(NULL);
 
     // I turn off the line

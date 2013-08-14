@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="exceptions.cpp" />
     <ClCompile Include="font.cpp" />
     <ClCompile Include="gdiinit.cpp" />
     <ClCompile Include="gyazo.cpp" />
@@ -89,6 +90,7 @@
     <ClCompile Include="stringconstants.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="exceptions.h" />
     <ClInclude Include="font.h" />
     <ClInclude Include="gdiinit.h" />
     <ClInclude Include="gyazolib.h" />

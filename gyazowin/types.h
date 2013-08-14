@@ -3,6 +3,7 @@
 
 // STL headers
 #include <string>
+using namespace std;
 
 // Project headers
 #include "rect.h"
@@ -16,13 +17,5 @@ typedef unsigned char       uint8_t;
 typedef unsigned short      uint16_t;
 typedef unsigned int        uint32_t;
 typedef unsigned __int64    uint64_t;
-
-typedef std::string         cstring;
-typedef std::wstring        wstring;
-
-typedef wstring             string;
-typedef string::value_type  char_type;
-
-#define Text(x) (L ## x)
 
 #endif // TYPES_H
