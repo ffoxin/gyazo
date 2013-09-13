@@ -96,7 +96,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int nCmdShow) {
 }
 
 // To register a window class
-void RegisterGyazoClass(HINSTANCE) throw(ExRegisterClass) {
+void RegisterGyazoClass(HINSTANCE) {
     WNDCLASS wc;
 
     // Main window
