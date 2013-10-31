@@ -1,9 +1,11 @@
 #include "gdiinit.h"
 
-GdiInit::GdiInit() {
+GdiInit::GdiInit()
+{
     GdiplusStartup(&m_token, &m_startupInput, NULL);
 }
 
-GdiInit::~GdiInit() {
+GdiInit::~GdiInit()
+{
     GdiplusShutdown(m_token);
 }

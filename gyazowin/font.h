@@ -4,7 +4,8 @@
 // System headers
 #include <windows.h>
 
-class GyazoFont {
+class GyazoFont
+{
 public:
     static HFONT GetFont(int fontHeight);
     static void Release();

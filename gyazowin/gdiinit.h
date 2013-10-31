@@ -6,7 +6,8 @@
 #include <gdiplus.h>
 using namespace Gdiplus;
 
-class GdiInit {
+class GdiInit
+{
 public:
     GdiInit();
     ~GdiInit();

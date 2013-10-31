@@ -5,20 +5,24 @@
 
 GyazoFont* GyazoFont::m_instance = NULL;
 
-HFONT GyazoFont::GetFont(int fontHeight) {
+HFONT GyazoFont::GetFont(int fontHeight)
+{
     if (m_instance != NULL
-        && fontHeight != m_instance->m_fontHeight) {
+        && fontHeight != m_instance->m_fontHeight)
+    {
         Release();
     }
 
-    if (m_instance == NULL) {
+    if (m_instance == NULL)
+    {
         m_instance = new GyazoFont(fontHeight);
     }
 
     return m_instance->m_font;
 }
 
-GyazoFont::GyazoFont(int fontHeight) {
+GyazoFont::GyazoFont(int fontHeight)
+{
     m_fontHeight = fontHeight;
 
     m_font = CreateFontW(
@@ -39,11 +43,13 @@ GyazoFont::GyazoFont(int fontHeight) {
         );
 }
 
-GyazoFont::~GyazoFont() {
+GyazoFont::~GyazoFont()
+{
     DeleteObject(m_font);
 }
 
-void GyazoFont::Release() {
+void GyazoFont::Release()
+{
     delete m_instance;
     m_instance = NULL;
 }

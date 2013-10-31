@@ -7,7 +7,8 @@
 // Project headers
 #include "size.h"
 
-class BaseRect {
+class BaseRect
+{
 public:
     BaseRect();
 
@@ -23,7 +24,8 @@ public:
     LONG&   bottom;
 };
 
-class GyazoRect : public BaseRect {
+class GyazoRect : public BaseRect
+{
 public:
     GyazoRect();
     GyazoRect(const LONG& left_, const LONG& top_, const LONG& right_, const LONG& bottom_);

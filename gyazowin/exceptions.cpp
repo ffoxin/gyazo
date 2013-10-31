@@ -5,7 +5,7 @@
 //========================================================================
 
 ExRegisterClass::ExRegisterClass(const wstring& className) :
-    m_className(className)
+m_className(className)
 {
     // empty
 }
