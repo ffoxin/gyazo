@@ -19,7 +19,6 @@ const GyazoSize cursorWinOffset(5, 5);
 const GyazoSize clipWinTextBorder(5, 5);
 
 // Globals
-HINSTANCE hInstance;                // Application instance
 HWND hClipWnd;
 HWND hCursorWnd;
 GyazoRect cursorWinRect;            // mouse coordinates window rect
@@ -30,7 +29,7 @@ GyazoSize screenOffset;             // virtual screen offset
 GyazoSize screenSize;               // virtual screen size
 
 // Declarations
-void RegisterGyazoClass(HINSTANCE);
+void                RegisterGyazoClass(HINSTANCE);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProcMain(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK    WndProcClip(HWND, UINT, WPARAM, LPARAM);
@@ -113,7 +112,7 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 }
 
 // To register a window class
-void RegisterGyazoClass(HINSTANCE)
+void RegisterGyazoClass(HINSTANCE hInstance)
 {
     WNDCLASS wc;
 
@@ -172,7 +171,6 @@ void RegisterGyazoClass(HINSTANCE)
 BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 {
     HWND hWnd;
-    hInstance = hInst;
 
     screenOffset.cx = GetSystemMetrics(SM_XVIRTUALSCREEN);
     screenOffset.cy = GetSystemMetrics(SM_YVIRTUALSCREEN);

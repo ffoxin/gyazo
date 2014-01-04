@@ -9,18 +9,18 @@ using namespace Gdiplus;
 // Project headers
 #include "types.h"
 
-bool    GetEncoderClsid(const wstring& format, CLSID& clsid);
-bool    IsPngFile(const wstring& fileName);
-void    ExecUrl(const wstring& url);
-void    SetClipBoard(const wstring& text);
-bool    ImageToPng(Image* image, const wstring& fileName);
-bool    FileToPng(const wstring& destFile, const wstring& srcFile);
 bool    BitmapToPng(HBITMAP hBmp, const wstring& fileName);
-bool    UploadFile(const wstring& fileName);
-wstring  GetId();
-bool    SaveId(const wstring& sId);
 int     ErrorMessage(const wstring& lpText);
-wstring  GetIdDirPath();
-wstring  GetIdFilePath();
+void    ExecUrl(const wstring& url);
+bool    FileToPng(const wstring& destFile, const wstring& srcFile);
+bool    GetEncoderClsid(const wstring& format, CLSID& clsid);
+wstring GetId();
+wstring GetIdDirPath();
+wstring GetIdFilePath();
+bool    ImageToPng(Image* image, const wstring& fileName);
+bool    IsPngFile(const wstring& fileName);
+bool    SaveId(const wstring& sId);
+void    SetClipBoard(const wstring& text);
+bool    UploadFile(const wstring& fileName);
 
 #endif // GYAZOLIB_H
