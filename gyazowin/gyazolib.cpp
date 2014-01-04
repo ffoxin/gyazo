@@ -1,7 +1,8 @@
 ﻿// System headers
 #include <ShlObj.h>
 #include <Shlwapi.h>
-#include <WinInet.h>
+//#include <WinInet.h>
+#include <winhttp.h>
 
 // STL headers
 #include <fstream>
@@ -169,6 +170,32 @@ bool BitmapToPng(HBITMAP hBmp, const wstring& fileName)
     return ImageToPng(&bitmap, fileName);
 }
 
+typedef unique_ptr<void, decltype(&WinHttpCloseHandle)> InternetHandle_t;
+class InternetHandle
+{
+public:
+    InternetHandle() = delete;
+    InternetHandle(const InternetHandle&) = delete;
+    InternetHandle& operator=(const InternetHandle&) = delete;
+
+    InternetHandle(HINTERNET hInternet) :
+        m_hInternet(hInternet, &WinHttpCloseHandle)
+    {
+    }
+    ~InternetHandle()
+    {
+    }
+    operator HINTERNET()
+    {
+        return m_hInternet.get();
+    }
+
+
+private:
+    InternetHandle_t m_hInternet;
+
+};
+
 bool UploadFile(const wstring& fileName)
 {
     ostringstream buf; // Outgoing messages
@@ -178,7 +205,12 @@ bool UploadFile(const wstring& fileName)
     string idStr(tidStr.begin(), tidStr.end());
 
     // Configuring Message
-    // -- "id" part
+    // "id" part
+    // ------BOUNDARYBOUNDARY----
+    // content-disposition: form-data; name="id"
+    //
+    //
+    //
     buf << sDivider;
     buf << sBoundary;
     buf << sCrLf;
@@ -220,52 +252,97 @@ bool UploadFile(const wstring& fileName)
         string msg(buf.str());
 
         // WinInet preparation (proxy required)
-        HINTERNET hSession = InternetOpenW(sTitle, INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
-        if (hSession == NULL)
+        InternetHandle hSession = WinHttpOpen(sTitle, 
+                                              WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                              WINHTTP_NO_PROXY_NAME, 
+                                              WINHTTP_NO_PROXY_BYPASS, 
+                                              0);
+        if (!hSession)
         {
             throw ExWininetConfigure();
         }
 
         // Access point
-        HINTERNET hConnection = InternetConnectW(hSession, GYAZO_UPLOAD_SERVER,
-                                                 INTERNET_DEFAULT_HTTP_PORT, NULL, NULL,
-                                                 INTERNET_SERVICE_HTTP, 0, NULL);
-        if (hConnection == NULL)
+        InternetHandle hConnection = WinHttpConnect(hSession,
+                                                    GYAZO_UPLOAD_SERVER, 
+                                                    INTERNET_DEFAULT_HTTP_PORT, 
+                                                    0);
+        if (!hConnection)
         {
             throw ExConnectionInit();
         }
 
         // Full set requirements before
-        HINTERNET hRequest = HttpOpenRequestW(hConnection, GYAZO_POST, GYAZO_UPLOAD_PATH,
-                                              NULL, NULL, NULL,
-                                              INTERNET_FLAG_DONT_CACHE | INTERNET_FLAG_RELOAD,
-                                              NULL);
-        if (hRequest == NULL)
+        InternetHandle hRequest = WinHttpOpenRequest(hConnection, 
+                                                     GYAZO_POST, 
+                                                     GYAZO_UPLOAD_PATH,
+                                                     NULL, 
+                                                     WINHTTP_NO_REFERER, 
+                                                     NULL/*WINHTTP_DEFAULT_ACCEPT_TYPES*/,
+                                                     WINHTTP_FLAG_REFRESH);
+        if (!hRequest)
         {
             throw ExComposePost();
         }
 
         // User Agent
-        BOOL bResult = HttpAddRequestHeadersW(hRequest, GYAZO_USER_AGENT, wcslen(GYAZO_USER_AGENT),
-                                              HTTP_ADDREQ_FLAG_ADD | HTTP_ADDREQ_FLAG_REPLACE);
+        BOOL bResult = WinHttpAddRequestHeaders(hRequest, 
+                                                GYAZO_USER_AGENT, 
+                                                wcslen(GYAZO_USER_AGENT),
+                                                WINHTTP_ADDREQ_FLAG_ADD | 
+                                                WINHTTP_ADDREQ_FLAG_REPLACE);
         if (bResult == FALSE)
         {
             throw ExSetUserAgent();
         }
 
-        bResult = HttpSendRequestW(hRequest, GYAZO_HEADER, wcslen(GYAZO_HEADER),
-                                   (LPVOID)msg.c_str(), (DWORD)msg.length());
+        /*bResult = HttpSendRequestW(hRequest, GYAZO_HEADER, wcslen(GYAZO_HEADER),
+                                   (LPVOID)msg.c_str(),
+                                   (DWORD)msg.size());
+                                   if (bResult == FALSE)
+                                   {
+                                   throw ExFailedUpload();
+                                   }*/
+
+        bResult = WinHttpSendRequest(hRequest, 
+                                     GYAZO_HEADER, 
+                                     wcslen(GYAZO_HEADER),
+                                     (LPVOID)msg.c_str(),
+                                     (DWORD)msg.size(),
+                                     (DWORD)msg.size(),
+                                     NULL);
         if (bResult == FALSE)
         {
             throw ExFailedUpload();
         }
+        /*const size_t steps = 1;
+        const size_t step_size = ceil((double)msg.size() / steps);
+        for (size_t step = 0; step < steps; ++step)
+        {
+        const size_t from = step * step_size;
+        const size_t current_size = step != steps - 1 ? step_size : msg.size() - (steps - 1) * step_size;
+        bResult = HttpSendRequestW(hRequest, GYAZO_HEADER, wcslen(GYAZO_HEADER),
+        (LPVOID)(msg.c_str() + (from ? from + 1 : 0)),
+        (DWORD)current_size);
+        bResult = WinHttpSendRequest()
+        if (bResult == FALSE)
+        {
+        throw ExFailedUpload();
+        }
+        }*/
 
         DWORD nResponse = 8;
         wchar_t response[8] = { };
 
         // state code
-        HttpQueryInfoW(hRequest, HTTP_QUERY_STATUS_CODE, response, &nResponse, 0);
-        if (stoi(response) != 200)
+        bResult = WinHttpQueryHeaders(hRequest,
+                                      WINHTTP_QUERY_STATUS_CODE,
+                                      WINHTTP_HEADER_NAME_BY_INDEX,
+                                      response,
+                                      &nResponse,
+                                      0);
+        if (bResult == FALSE ||
+            stoi(response) != 200)
         {
             throw ExUploadImage();
         }
@@ -276,9 +353,15 @@ bool UploadFile(const wstring& fileName)
 
         wcscpy_s(id, GYAZO_ID);
 
-        HttpQueryInfoW(hRequest, HTTP_QUERY_CUSTOM, id, &nId, 0);
-        if (GetLastError() != ERROR_HTTP_HEADER_NOT_FOUND
-            && nId != 0)
+        bResult = WinHttpQueryHeaders(hRequest,
+                                      WINHTTP_QUERY_CUSTOM,
+                                      WINHTTP_HEADER_NAME_BY_INDEX,
+                                      id,
+                                      &nId,
+                                      0);
+        if (bResult == TRUE &&
+            GetLastError() != ERROR_WINHTTP_HEADER_NOT_FOUND &&
+            nId != 0)
         {
             // Save new id
             SaveId(id);
@@ -290,23 +373,37 @@ bool UploadFile(const wstring& fileName)
         wstring srcUrl;
 
         // Never so long , but once well
-        while (InternetReadFile(hRequest, url, 1024, &nUrl) == TRUE
-               && nUrl != 0)
+        while (WinHttpReadData(hRequest, url, 1024, &nUrl) == TRUE &&
+               nUrl != 0)
         {
             srcUrl.append(url, url + nUrl);
         }
 
+        // Add "cache" subdomain
         srcUrl.insert(srcUrl.find(L"gyazo.com"), L"cache.");
+        // Add direct image extension
         srcUrl += L".png";
-
-        // Copy the URL to the clipboard
+        // Copy URL to clipboard
         SetClipBoard(srcUrl);
-
-        // Launch an URL
+        // Open URL in default app
         ExecUrl(srcUrl);
     }
     catch (IExTemplate& ex)
     {
+        int error = GetLastError();
+        if (error)
+        {
+            wchar_t* buf;
+            FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                           NULL,
+                           error,
+                           MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                           buf,
+                           0,
+                           NULL);
+            MessageBoxW(NULL, buf, L"Error!", MB_OK);
+            LocalFree(buf);
+        }
         ex.report();
         return false;
     }
