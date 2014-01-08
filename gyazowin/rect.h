@@ -11,6 +11,7 @@ class BaseRect
 {
 public:
     BaseRect();
+    BaseRect& operator=(const BaseRect& baseRect);
 
 protected:
     void Init(const LONG& left_, const LONG& top_, const LONG& right_, const LONG& bottom_);

@@ -9,6 +9,11 @@ BaseRect::BaseRect()
     // empty
 }
 
+BaseRect& BaseRect::operator=(const BaseRect& baseRect)
+{
+    rect = baseRect.rect;
+}
+
 void BaseRect::Init(const LONG& left_, const LONG& top_, const LONG& right_, const LONG& bottom_)
 {
     left = left_;

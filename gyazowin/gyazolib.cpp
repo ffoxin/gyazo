@@ -1,8 +1,8 @@
 ﻿// System headers
 #include <ShlObj.h>
 #include <Shlwapi.h>
-//#include <WinInet.h>
-#include <winhttp.h>
+#include <WinInet.h>
+//#include <winhttp.h>
 
 // STL headers
 #include <fstream>
@@ -12,7 +12,6 @@
 using namespace std;
 
 // Project headers
-#include "exceptions.h"
 #include "gdiinit.h"
 #include "stringconstants.h"
 
@@ -133,14 +132,14 @@ void SetClipBoard(const wstring& text)
 }
 
 // Save Image class data to file
-bool ImageToPng(Image* image, const wstring& fileName)
+bool ImageToPng(Image* image, const wchar_t* fileName)
 {
     if (image->GetLastStatus() == 0)
     {
         CLSID clsidEncoder;
         if (GetEncoderClsid(L"image/png", clsidEncoder))
         {
-            if (image->Save(fileName.c_str(), &clsidEncoder, 0) == 0)
+            if (image->Save(fileName, &clsidEncoder, 0) == 0)
             {
                 return true;
             }
@@ -151,17 +150,17 @@ bool ImageToPng(Image* image, const wstring& fileName)
 }
 
 // Convert to PNG format
-bool FileToPng(const wstring& destFile, const wstring& srcFile)
+bool FileToPng(const wchar_t* srcFile, const wchar_t* destFile)
 {
     const GdiInit gpi = GdiInit();
 
-    Image image(srcFile.c_str(), 0);
+    Image image(srcFile, 0);
 
     return ImageToPng(&image, destFile);
 }
 
 // save BITMAP to PNG file
-bool BitmapToPng(HBITMAP hBmp, const wstring& fileName)
+bool BitmapToPng(HBITMAP hBmp, const wchar_t* fileName)
 {
     const GdiInit gpi = GdiInit();
 
@@ -170,7 +169,7 @@ bool BitmapToPng(HBITMAP hBmp, const wstring& fileName)
     return ImageToPng(&bitmap, fileName);
 }
 
-typedef unique_ptr<void, decltype(&WinHttpCloseHandle)> InternetHandle_t;
+typedef unique_ptr<void, decltype(&InternetCloseHandle)> InternetHandle_t;
 class InternetHandle
 {
 public:
@@ -179,7 +178,7 @@ public:
     InternetHandle& operator=(const InternetHandle&) = delete;
 
     InternetHandle(HINTERNET hInternet) :
-        m_hInternet(hInternet, &WinHttpCloseHandle)
+        m_hInternet(hInternet, &InternetCloseHandle)
     {
     }
     ~InternetHandle()
@@ -196,13 +195,34 @@ private:
 
 };
 
-bool UploadFile(const wstring& fileName)
+void ReportError()
 {
-    ostringstream buf; // Outgoing messages
+    int error = GetLastError();
+    if (error)
+    {
+        wchar_t* buf;
+        FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER
+                       | FORMAT_MESSAGE_FROM_SYSTEM
+                       | FORMAT_MESSAGE_FROM_HMODULE,
+                       GetModuleHandleW(L"Winhttp.dll"),
+                       error,
+                       MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                       (LPTSTR)&buf,
+                       0,
+                       NULL);
 
-    // Get an ID
-    wstring tidStr = GetId();
-    string idStr(tidStr.begin(), tidStr.end());
+        wstringstream wss;
+        wss << "[" << error << "] " << buf;
+        LocalFree(buf);
+
+        MessageBoxW(NULL, wss.str().c_str(), L"Error", MB_OK);
+    }
+    ExitProcess(error);
+}
+
+string BuildRequest(const wchar_t* fileName)
+{
+    ostringstream request; // Outgoing messages
 
     // Configuring Message
     // "id" part
@@ -211,218 +231,179 @@ bool UploadFile(const wstring& fileName)
     //
     //
     //
-    buf << sDivider;
-    buf << sBoundary;
-    buf << sCrLf;
-    buf << sContentId;
-    buf << sCrLf;
-    buf << sCrLf;
-    buf << idStr;
-    buf << sCrLf;
+    request << sDivider;
+    request << sBoundary;
+    request << sCRLF;
+    request << sContentId;
+    request << sCRLF;
+    request << sCRLF;
+    request << GetId();
+    request << sCRLF;
 
     // - " ImageData " part
-    buf << sDivider;
-    buf << sBoundary;
-    buf << sCrLf;
-    buf << sContentData;
-    buf << sCrLf;
-    buf << sCrLf;
+    request << sDivider;
+    request << sBoundary;
+    request << sCRLF;
+    request << sContentData;
+    request << sCRLF;
+    request << sCRLF;
 
-    try
+    // Read a PNG file
+    ifstream png(fileName, ios::binary);
+    if (png.fail())
     {
-        // Read a PNG file
-        ifstream png(fileName, ios::binary);
-        if (png.fail())
-        {
-            throw ExOpenPng();
-        }
-
-        // Read content & append to buffer
-        buf << png.rdbuf();
-        png.close();
-
-        // Stuff
-        buf << sCrLf;
-        buf << sDivider;
-        buf << sBoundary;
-        buf << sDivider;
-        buf << sCrLf;
-
-        // Message completion
-        string msg(buf.str());
-
-        // WinInet preparation (proxy required)
-        InternetHandle hSession = WinHttpOpen(sTitle, 
-                                              WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                              WINHTTP_NO_PROXY_NAME, 
-                                              WINHTTP_NO_PROXY_BYPASS, 
-                                              0);
-        if (!hSession)
-        {
-            throw ExWininetConfigure();
-        }
-
-        // Access point
-        InternetHandle hConnection = WinHttpConnect(hSession,
-                                                    GYAZO_UPLOAD_SERVER, 
-                                                    INTERNET_DEFAULT_HTTP_PORT, 
-                                                    0);
-        if (!hConnection)
-        {
-            throw ExConnectionInit();
-        }
-
-        // Full set requirements before
-        InternetHandle hRequest = WinHttpOpenRequest(hConnection, 
-                                                     GYAZO_POST, 
-                                                     GYAZO_UPLOAD_PATH,
-                                                     NULL, 
-                                                     WINHTTP_NO_REFERER, 
-                                                     NULL/*WINHTTP_DEFAULT_ACCEPT_TYPES*/,
-                                                     WINHTTP_FLAG_REFRESH);
-        if (!hRequest)
-        {
-            throw ExComposePost();
-        }
-
-        // User Agent
-        BOOL bResult = WinHttpAddRequestHeaders(hRequest, 
-                                                GYAZO_USER_AGENT, 
-                                                wcslen(GYAZO_USER_AGENT),
-                                                WINHTTP_ADDREQ_FLAG_ADD | 
-                                                WINHTTP_ADDREQ_FLAG_REPLACE);
-        if (bResult == FALSE)
-        {
-            throw ExSetUserAgent();
-        }
-
-        /*bResult = HttpSendRequestW(hRequest, GYAZO_HEADER, wcslen(GYAZO_HEADER),
-                                   (LPVOID)msg.c_str(),
-                                   (DWORD)msg.size());
-                                   if (bResult == FALSE)
-                                   {
-                                   throw ExFailedUpload();
-                                   }*/
-
-        bResult = WinHttpSendRequest(hRequest, 
-                                     GYAZO_HEADER, 
-                                     wcslen(GYAZO_HEADER),
-                                     (LPVOID)msg.c_str(),
-                                     (DWORD)msg.size(),
-                                     (DWORD)msg.size(),
-                                     NULL);
-        if (bResult == FALSE)
-        {
-            throw ExFailedUpload();
-        }
-        /*const size_t steps = 1;
-        const size_t step_size = ceil((double)msg.size() / steps);
-        for (size_t step = 0; step < steps; ++step)
-        {
-        const size_t from = step * step_size;
-        const size_t current_size = step != steps - 1 ? step_size : msg.size() - (steps - 1) * step_size;
-        bResult = HttpSendRequestW(hRequest, GYAZO_HEADER, wcslen(GYAZO_HEADER),
-        (LPVOID)(msg.c_str() + (from ? from + 1 : 0)),
-        (DWORD)current_size);
-        bResult = WinHttpSendRequest()
-        if (bResult == FALSE)
-        {
-        throw ExFailedUpload();
-        }
-        }*/
-
-        DWORD nResponse = 8;
-        wchar_t response[8] = { };
-
-        // state code
-        bResult = WinHttpQueryHeaders(hRequest,
-                                      WINHTTP_QUERY_STATUS_CODE,
-                                      WINHTTP_HEADER_NAME_BY_INDEX,
-                                      response,
-                                      &nResponse,
-                                      0);
-        if (bResult == FALSE ||
-            stoi(response) != 200)
-        {
-            throw ExUploadImage();
-        }
-
-        // get new id
-        DWORD nId = 100;
-        wchar_t id[100];
-
-        wcscpy_s(id, GYAZO_ID);
-
-        bResult = WinHttpQueryHeaders(hRequest,
-                                      WINHTTP_QUERY_CUSTOM,
-                                      WINHTTP_HEADER_NAME_BY_INDEX,
-                                      id,
-                                      &nId,
-                                      0);
-        if (bResult == TRUE &&
-            GetLastError() != ERROR_WINHTTP_HEADER_NOT_FOUND &&
-            nId != 0)
-        {
-            // Save new id
-            SaveId(id);
-        }
-
-        // Read URL results
-        DWORD nUrl;
-        char url[1024];
-        wstring srcUrl;
-
-        // Never so long , but once well
-        while (WinHttpReadData(hRequest, url, 1024, &nUrl) == TRUE &&
-               nUrl != 0)
-        {
-            srcUrl.append(url, url + nUrl);
-        }
-
-        // Add "cache" subdomain
-        srcUrl.insert(srcUrl.find(L"gyazo.com"), L"cache.");
-        // Add direct image extension
-        srcUrl += L".png";
-        // Copy URL to clipboard
-        SetClipBoard(srcUrl);
-        // Open URL in default app
-        ExecUrl(srcUrl);
+        ReportError();
     }
-    catch (IExTemplate& ex)
+
+    // Read content & append to buffer
+    request << png.rdbuf();
+    png.close();
+
+    // Stuff
+    request << sCRLF;
+    request << sDivider;
+    request << sBoundary;
+    request << sDivider;
+    request << sCRLF;
+
+    return request.str();
+}
+
+bool UploadFile(const wchar_t* fileName)
+{
+    string request = BuildRequest(fileName);
+
+    // WinInet preparation
+    InternetHandle hSession = InternetOpenW(
+        sTitle,
+        INTERNET_OPEN_TYPE_PRECONFIG,
+        NULL,
+        NULL,
+        0);
+    if (!hSession)
     {
-        int error = GetLastError();
-        if (error)
-        {
-            wchar_t* buf;
-            FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                           NULL,
-                           error,
-                           MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                           buf,
-                           0,
-                           NULL);
-            MessageBoxW(NULL, buf, L"Error!", MB_OK);
-            LocalFree(buf);
-        }
-        ex.report();
-        return false;
+        ReportError();
     }
+
+    // Access point
+    InternetHandle hConnection = InternetConnectW(
+        hSession,
+        GYAZO_UPLOAD_SERVER,
+        INTERNET_DEFAULT_HTTP_PORT,
+        NULL,
+        NULL,
+        INTERNET_SERVICE_HTTP,
+        0,
+        NULL);
+    if (!hConnection)
+    {
+        ReportError();
+    }
+
+    // Full set requirements before
+    InternetHandle hRequest = HttpOpenRequestW(
+        hConnection,
+        GYAZO_POST,
+        GYAZO_UPLOAD_PATH,
+        NULL,
+        NULL,
+        NULL,
+        INTERNET_FLAG_DONT_CACHE
+        | INTERNET_FLAG_RELOAD,
+        NULL);
+    if (!hRequest)
+    {
+        ReportError();
+    }
+
+    // User Agent
+    BOOL bResult = HttpAddRequestHeadersW(
+        hRequest,
+        GYAZO_USER_AGENT,
+        wcslen(GYAZO_USER_AGENT),
+        HTTP_ADDREQ_FLAG_ADD
+        | HTTP_ADDREQ_FLAG_REPLACE);
+    if (bResult == FALSE)
+    {
+        ReportError();
+    }
+
+    bResult = HttpSendRequestW(
+        hRequest,
+        GYAZO_HEADER,
+        wcslen(GYAZO_HEADER),
+        (LPVOID)request.c_str(),
+        request.size());
+    if (bResult == FALSE)
+    {
+        ReportError();
+    }
+
+    DWORD bufferLength = 100;
+    wchar_t buffer[101] = { };
+
+    // state code
+    bResult = HttpQueryInfoW(
+        hRequest, 
+        HTTP_QUERY_STATUS_CODE, 
+        buffer, 
+        &bufferLength,
+        0);
+    if (bResult == FALSE ||
+        stoi(buffer) != 200)
+    {
+        ReportError();
+    }
+
+    // get new id
+    wcscpy_s(buffer, GYAZO_ID);
+    bResult = HttpQueryInfoW(
+        hRequest, 
+        HTTP_QUERY_CUSTOM, 
+        buffer,
+        &bufferLength,
+        0);
+    if (bResult == TRUE
+        && GetLastError() != ERROR_HTTP_HEADER_NOT_FOUND
+        && bufferLength != 0)
+    {
+        // Save new id
+        SaveId(buffer);
+    }
+
+    // Read URL results
+    DWORD urlLength;
+    char url[1024];
+    wstring srcUrl;
+
+    // Never so long , but once well
+    while (InternetReadFile(hRequest, url, 1024, &urlLength) == TRUE &&
+           urlLength != 0)
+    {
+        srcUrl.append(url, url + urlLength);
+    }
+
+    // Prepare url
+    srcUrl.insert(srcUrl.find(L"gyazo.com"), L"cache.");
+    srcUrl += L".png";
+
+    // Copy URL to clipboard and open in browser
+    SetClipBoard(srcUrl);
+    ExecUrl(srcUrl);
 
     return true;
 }
 
 // I generate load the ID
-wstring GetId()
+string GetId()
 {
     // load ID from the file
-    wifstream ifs;
-    wstring sId;
-
-    ifs.open(GetIdFilePath());
+    string id;
+    ifstream ifs(GetIdFilePath());
     if (!ifs.fail())
     {
         // read the ID
-        ifs >> sId;
+        ifs >> id;
         ifs.close();
     }
     else
@@ -434,12 +415,12 @@ wstring GetId()
         ifs.open(idFile);
         if (!ifs.fail())
         {
-            ifs >> sId;
+            ifs >> id;
             ifs.close();
         }
     }
 
-    return sId;
+    return id;
 }
 
 // Save ID

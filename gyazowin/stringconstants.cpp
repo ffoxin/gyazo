@@ -21,16 +21,7 @@ const wchar_t* const GYAZO_ID_FILEPATH = L"\\id.txt";
 const wchar_t* const GYAZO_POST = L"POST";
 const wchar_t* const GYAZO_URL_DIVIDER = L"/";
 
-const wchar_t* const ERROR_REGISTER_CLASS = L"Cannot register window class ";
 const wchar_t* const ERROR_CONVERT_IMAGE = L"Cannot convert this image";
-const wchar_t* const ERROR_OPEN_PNG = L"PNG open failed";
-const wchar_t* const ERROR_WININET_CONFIGURE = L"Cannot configure wininet";
-const wchar_t* const ERROR_CONNECTION_INIT = L"Cannot initiate connection";
-const wchar_t* const ERROR_COMPOSE_POST = L"Cannot compose post request";
-const wchar_t* const ERROR_SET_USER_AGENT = L"Cannot set user agent";
-const wchar_t* const ERROR_UPLOAD_IMAGE = L"Failed to upload (unexpected result code, under maintenance?)";
-const wchar_t* const ERROR_UPLOAD_FAILED = L"Failed to upload";
-
 
 const char* const sBoundary = "----BOUNDARYBOUNDARY----";       // boundary
 const char* const sDivider = "--";
@@ -38,4 +29,4 @@ const char* const sContentId = "content-disposition: form-data; name=\"id\"";
 const char* const sContentData = "content-disposition: form-data; name=\"imagedata\"); "
 "filename=\"gyazo.com\"";
 
-const char sCrLf[] = { 0xd, 0xa, 0x0 };                // Diverted (CR + LF)
+const char sCRLF[] = { 0xd, 0xa, 0x0 };                // Diverted (CR + LF)

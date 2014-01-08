@@ -9,6 +9,11 @@ BaseSize::BaseSize()
     // empty
 }
 
+BaseSize& BaseSize::operator=(const BaseSize& baseSize)
+{
+    size = baseSize.size;
+}
+
 void BaseSize::Init(const LONG& cx_, const LONG& cy_)
 {
     cx = cx_;

@@ -9,7 +9,6 @@
 #include <Shlwapi.h>
 
 // Project headers
-#include "exceptions.h"
 #include "font.h"
 #include "gyazolib.h"
 #include "resource.h"
@@ -35,9 +34,49 @@ LRESULT CALLBACK    WndProcMain(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK    WndProcClip(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK    WndProcCursor(HWND, UINT, WPARAM, LPARAM);
 
-void                DrawRubberband(HDC hdc, LPRECT newRect);
-void                DrawCoordinates(HDC hdc, LPRECT newRect);
+void DrawRubberband(LPRECT newRect);
+void DrawCoordinates(LPRECT newRect);
 int                 DrawLabel(HDC hdc, const GyazoSize& textPos, LPCWSTR sText, int nText);
+
+class TempFile
+{
+public:
+    TempFile() : m_isInit(false)
+    {
+    }
+    ~TempFile()
+    {
+        Release();
+    }
+
+    operator const wchar_t*()
+    {
+        Init();
+        return m_tempFile;
+    }
+
+private:
+    void Init()
+    {
+        if (!m_isInit)
+        {
+            wchar_t tempDir[MAX_PATH];
+            GetTempPathW(MAX_PATH, tempDir);
+            GetTempFileNameW(tempDir, GYAZO_PREFIX, 0, m_tempFile);
+            m_isInit = true;
+        }
+    }
+    void Release()
+    {
+        if (m_isInit)
+        {
+            DeleteFileW(m_tempFile);
+        }
+    }
+
+    wchar_t m_tempFile[MAX_PATH];
+    bool m_isInit;
+};
 
 // Entry point
 #pragma warning(suppress: 28251)
@@ -52,43 +91,34 @@ int WINAPI wWinMain(HINSTANCE hInstance,
     wchar_t appPath[MAX_PATH];
     if (GetModuleFileNameW(NULL, appPath, MAX_PATH) == 0)
     {
-        return -1;
+        ReportError();
     }
     PathRemoveFileSpecW(appPath);
     if (SetCurrentDirectoryW(appPath) == 0)
     {
-        return -2;
+        ReportError();
     }
 
     // Upload file if it specified as an argument
     if (__argc == 2)
     {
-        // Exit by file upload
-        wstring fileArg = __wargv[1];
-        if (IsPngFile(fileArg))
-        {
-            // PNG to upload directly
-            UploadFile(fileArg);
-        }
-        else
+        TempFile tmpFile;
+        const wchar_t* fileArg = __wargv[1];
+        if (!IsPngFile(fileArg))
         {
             // Convert to PNG format
-            wchar_t tmpDir[MAX_PATH], tmpFile[MAX_PATH];
-            GetTempPathW(MAX_PATH, tmpDir);
-            GetTempFileNameW(tmpDir, GYAZO_PREFIX, 0, tmpFile);
-
-            if (FileToPng(tmpFile, fileArg))
-            {
-                //Upload
-                UploadFile(tmpFile);
-            }
-            else
+            if (!FileToPng(fileArg, tmpFile))
             {
                 // Can not be converted into PNG
                 ErrorMessage(ERROR_CONVERT_IMAGE);
+                ReportError();
             }
-            DeleteFileW(tmpFile);
+            fileArg = tmpFile;
         }
+
+        // Upload PNG
+        UploadFile(fileArg);
+
         return TRUE;
     }
 
@@ -130,7 +160,7 @@ void RegisterGyazoClass(HINSTANCE hInstance)
 
     if (RegisterClassW(&wc) == 0)
     {
-        throw ExRegisterClass(sWindowMainClass);
+        ReportError();
     }
 
     // Clip window
@@ -147,7 +177,7 @@ void RegisterGyazoClass(HINSTANCE hInstance)
 
     if (RegisterClassW(&wc) == 0)
     {
-        throw ExRegisterClass(sWindowLayerClass);
+        ReportError();
     }
 
     // Cursor window
@@ -164,7 +194,7 @@ void RegisterGyazoClass(HINSTANCE hInstance)
 
     if (RegisterClassW(&wc) == 0)
     {
-        throw ExRegisterClass(sWindowCursorClass);
+        ReportError();
     }
 }
 
@@ -197,7 +227,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
     MoveWindow(hWnd, screenOffset.cx, screenOffset.cy, screenSize.cx, screenSize.cy, FALSE);
 
     // (I troubled and is combed SW_MAXIMIZE) ignore the nCmdShow
-    ShowWindow(hWnd, SW_SHOW);
+    ShowWindow(hWnd, /*SW_SHOW*/nCmdShow);
     UpdateWindow(hWnd);
 
     // ESC key detection timer
@@ -232,7 +262,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 }
 
 // Drawing rubber band
-void DrawRubberband(HDC hdc, LPRECT newRect)
+void DrawRubberband(LPRECT newRect)
 {
     static bool firstDraw = true;   // First does not perform to erase the previous band
 
@@ -263,7 +293,8 @@ void DrawRubberband(HDC hdc, LPRECT newRect)
         std::swap(clipRect.bottom, clipRect.top);
     }
 
-    MoveWindow(hClipWnd,
+    MoveWindow(
+        hClipWnd,
                clipRect.left,
                clipRect.top,
                clipRect.right - clipRect.left + 1,
@@ -272,7 +303,7 @@ void DrawRubberband(HDC hdc, LPRECT newRect)
 }
 
 // Drawing rubber band
-void DrawCoordinates(HDC hdc, LPRECT newRect)
+void DrawCoordinates(LPRECT newRect)
 {
     static bool firstDraw = true;   // First does not perform to erase the previous band
 
@@ -302,7 +333,8 @@ void DrawCoordinates(HDC hdc, LPRECT newRect)
         coordRect.top = screenSize.cy - coordRect.bottom;
     }
 
-    MoveWindow(hCursorWnd,
+    MoveWindow(
+        hCursorWnd,
                coordRect.left,
                coordRect.top,
                coordRect.right,
@@ -397,8 +429,6 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
-
-    return FALSE;
 }
 
 void EraseBackgroundCursor(const HWND& hWnd)
@@ -447,8 +477,6 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
     default:
         return DefWindowProcW(hWnd, message, wParam, lParam);
     }
-
-    return FALSE;
 }
 
 void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
@@ -456,7 +484,7 @@ void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
     HDC hdc = GetDC(NULL);
 
     // I turn off the line
-    DrawRubberband(hdc, NULL);
+    DrawRubberband(NULL);
 
     // Check coordinate
     if (clipRect.right < clipRect.left)
@@ -482,8 +510,8 @@ void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
     }
 
     // Create a bitmap buffer
-    HBITMAP    newBMP = CreateCompatibleBitmap(hdc, imageSize.cx, imageSize.cy);
-    HDC        newDC = CreateCompatibleDC(hdc);
+    HBITMAP newBMP = CreateCompatibleBitmap(hdc, imageSize.cx, imageSize.cy);
+    HDC newDC = CreateCompatibleDC(hdc);
 
     // Associated
     SelectObject(newDC, newBMP);
@@ -522,8 +550,6 @@ void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
 // Window procedure
 LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    HDC hdc;
-
     static bool isClip = false;
     static GyazoRect clipRect;
 
@@ -547,15 +573,13 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         cursorPos.cx = LOWORD(lParam) + screenOffset.cx;
         cursorPos.cy = HIWORD(lParam) + screenOffset.cy;
 
-        hdc = GetDC(NULL);
-
         if (isClip)
         {
             // Set the new coordinate
             clipRect.right = cursorPos.cx;
             clipRect.bottom = cursorPos.cy;
 
-            DrawRubberband(hdc, clipRect);
+            DrawRubberband(clipRect);
         }
         else
         {
@@ -564,27 +588,22 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             cursorWinRect.right = cursorTextSize.cx + 4;
             cursorWinRect.bottom = cursorTextSize.cy;
 
-            DrawCoordinates(hdc, cursorWinRect);
+            DrawCoordinates(cursorWinRect);
             SendMessageW(hCursorWnd, WM_ERASEBKGND, NULL, NULL);
         }
-
-        ReleaseDC(NULL, hdc);
 
         SetCapture(hWnd);
         break;
 
 
     case WM_LBUTTONDOWN:
-        HDC hdc;
         // Clip start
         isClip = true;
 
         ReleaseCapture();
 
         // hide windows with mouse coordinates
-        hdc = GetDC(NULL);
-        DrawCoordinates(hdc, NULL);
-        ReleaseDC(NULL, hdc);
+        DrawCoordinates(NULL);
 
         // Set the initial position
         clipRect.left = LOWORD(lParam) + screenOffset.cx;

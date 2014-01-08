@@ -24,21 +24,13 @@ extern const wchar_t* const GYAZO_ID_FILEPATH;
 extern const wchar_t* const GYAZO_POST;
 extern const wchar_t* const GYAZO_URL_DIVIDER;
 
-extern const wchar_t* const ERROR_REGISTER_CLASS;
 extern const wchar_t* const ERROR_CONVERT_IMAGE;
-extern const wchar_t* const ERROR_UPLOAD_FAILED;
-extern const wchar_t* const ERROR_OPEN_PNG;
-extern const wchar_t* const ERROR_WININET_CONFIGURE;
-extern const wchar_t* const ERROR_CONNECTION_INIT;
-extern const wchar_t* const ERROR_COMPOSE_POST;
-extern const wchar_t* const ERROR_SET_USER_AGENT;
-extern const wchar_t* const ERROR_UPLOAD_IMAGE;
 
 extern const char* const sBoundary;
 extern const char* const sDivider;
 extern const char* const sContentId;
 extern const char* const sContentData;
 
-extern const char sCrLf[];
+extern const char sCRLF[];
 
 #endif // STRINGCONSTANTS_H

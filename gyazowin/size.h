@@ -7,6 +7,7 @@ class BaseSize
 {
 public:
     BaseSize();
+    BaseSize& operator=(const BaseSize& baseSize);
 
 protected:
     void Init(const LONG& cx_, const LONG& cy_);
