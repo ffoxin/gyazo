@@ -2,10 +2,10 @@
 
 GdiInit::GdiInit()
 {
-    GdiplusStartup(&m_token, &m_startupInput, NULL);
+    ::GdiplusStartup(&m_token, &m_startupInput, NULL);
 }
 
 GdiInit::~GdiInit()
 {
-    GdiplusShutdown(m_token);
+    ::GdiplusShutdown(m_token);
 }

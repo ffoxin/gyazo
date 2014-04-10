@@ -36,7 +36,7 @@ LRESULT CALLBACK    WndProcCursor(HWND, UINT, WPARAM, LPARAM);
 
 void DrawRubberband(LPRECT newRect);
 void DrawCoordinates(LPRECT newRect);
-int                 DrawLabel(HDC hdc, const GyazoSize& textPos, LPCWSTR sText, int nText);
+int DrawLabel(HDC hdc, const GyazoSize& textPos, LPCWSTR sText, size_t nText);
 
 class TempFile
 {
@@ -61,8 +61,8 @@ private:
         if (!m_isInit)
         {
             wchar_t tempDir[MAX_PATH];
-            GetTempPathW(MAX_PATH, tempDir);
-            GetTempFileNameW(tempDir, GYAZO_PREFIX, 0, m_tempFile);
+            ::GetTempPathW(MAX_PATH, tempDir);
+            ::GetTempFileNameW(tempDir, GYAZO_PREFIX, 0, m_tempFile);
             m_isInit = true;
         }
     }
@@ -70,7 +70,7 @@ private:
     {
         if (m_isInit)
         {
-            DeleteFileW(m_tempFile);
+            ::DeleteFileW(m_tempFile);
         }
     }
 
@@ -79,7 +79,6 @@ private:
 };
 
 // Entry point
-#pragma warning(suppress: 28251)
 int WINAPI wWinMain(HINSTANCE hInstance, 
                     HINSTANCE,
                     LPWSTR,
@@ -89,12 +88,12 @@ int WINAPI wWinMain(HINSTANCE hInstance,
 
     // Change working directory to app directory
     wchar_t appPath[MAX_PATH];
-    if (GetModuleFileNameW(NULL, appPath, MAX_PATH) == 0)
+    if (::GetModuleFileNameW(NULL, appPath, MAX_PATH) == 0)
     {
         ReportError();
     }
-    PathRemoveFileSpecW(appPath);
-    if (SetCurrentDirectoryW(appPath) == 0)
+    ::PathRemoveFileSpecW(appPath);
+    if (::SetCurrentDirectoryW(appPath) == 0)
     {
         ReportError();
     }
@@ -126,16 +125,16 @@ int WINAPI wWinMain(HINSTANCE hInstance,
     RegisterGyazoClass(hInstance);
 
     // I run the application initialization :
-    if (!InitInstance(hInstance, nShowCmd))
+    if (!::InitInstance(hInstance, nShowCmd))
     {
         return FALSE;
     }
 
     // Main message loop :
-    while (GetMessageW(&msg, NULL, 0, 0))
+    while (::GetMessageW(&msg, NULL, 0, 0))
     {
-        TranslateMessage(&msg);
-        DispatchMessageW(&msg);
+        ::TranslateMessage(&msg);
+        ::DispatchMessageW(&msg);
     }
 
     return (int)msg.wParam;
@@ -152,13 +151,13 @@ void RegisterGyazoClass(HINSTANCE hInstance)
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = hInstance;
-    wc.hIcon = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-    wc.hCursor = LoadCursorW(NULL, IDC_CROSS);    // + Cursor
+    wc.hIcon = ::LoadIconW(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wc.hCursor = ::LoadCursorW(NULL, IDC_CROSS);    // + Cursor
     wc.hbrBackground = 0;                            // Background
     wc.lpszMenuName = 0;
     wc.lpszClassName = sWindowMainClass;
 
-    if (RegisterClassW(&wc) == 0)
+    if (::RegisterClassW(&wc) == 0)
     {
         ReportError();
     }
@@ -169,13 +168,13 @@ void RegisterGyazoClass(HINSTANCE hInstance)
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = hInstance;
-    wc.hIcon = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-    wc.hCursor = LoadCursorW(NULL, IDC_CROSS);    // + Cursor
-    wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    wc.hIcon = ::LoadIconW(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wc.hCursor = ::LoadCursorW(NULL, IDC_CROSS);    // + Cursor
+    wc.hbrBackground = (HBRUSH)::GetStockObject(WHITE_BRUSH);
     wc.lpszMenuName = 0;
     wc.lpszClassName = sWindowLayerClass;
 
-    if (RegisterClassW(&wc) == 0)
+    if (::RegisterClassW(&wc) == 0)
     {
         ReportError();
     }
@@ -186,13 +185,13 @@ void RegisterGyazoClass(HINSTANCE hInstance)
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = hInstance;
-    wc.hIcon = LoadIconW(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-    wc.hCursor = LoadCursorW(NULL, IDC_CROSS);    // + Cursor
-    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    wc.hIcon = ::LoadIconW(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+    wc.hCursor = ::LoadCursorW(NULL, IDC_CROSS);    // + Cursor
+    wc.hbrBackground = (HBRUSH)::GetStockObject(BLACK_BRUSH);
     wc.lpszMenuName = 0;
     wc.lpszClassName = sWindowCursorClass;
 
-    if (RegisterClassW(&wc) == 0)
+    if (::RegisterClassW(&wc) == 0)
     {
         ReportError();
     }
@@ -202,12 +201,12 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
 {
     HWND hWnd;
 
-    screenOffset.cx = GetSystemMetrics(SM_XVIRTUALSCREEN);
-    screenOffset.cy = GetSystemMetrics(SM_YVIRTUALSCREEN);
-    screenSize.cx = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    screenSize.cy = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+    screenOffset.cx = ::GetSystemMetrics(SM_XVIRTUALSCREEN);
+    screenOffset.cy = ::GetSystemMetrics(SM_YVIRTUALSCREEN);
+    screenSize.cx = ::GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    screenSize.cy = ::GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-    hWnd = CreateWindowExW(
+    hWnd = ::CreateWindowExW(
         WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_TOPMOST
 #if (_WIN32_WINNT >= 0x0500)
         | WS_EX_NOACTIVATE
@@ -224,17 +223,17 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
     }
 
     // I cover the entire screen
-    MoveWindow(hWnd, screenOffset.cx, screenOffset.cy, screenSize.cx, screenSize.cy, FALSE);
+    ::MoveWindow(hWnd, screenOffset.cx, screenOffset.cy, screenSize.cx, screenSize.cy, FALSE);
 
     // (I troubled and is combed SW_MAXIMIZE) ignore the nCmdShow
-    ShowWindow(hWnd, /*SW_SHOW*/nCmdShow);
-    UpdateWindow(hWnd);
+    ::ShowWindow(hWnd, /*SW_SHOW*/nCmdShow);
+    ::UpdateWindow(hWnd);
 
     // ESC key detection timer
-    SetTimer(hWnd, 1, 100, NULL);
+    ::SetTimer(hWnd, 1, 100, NULL);
 
     // You can layer window
-    hClipWnd = CreateWindowExW(
+    hClipWnd = ::CreateWindowExW(
         WS_EX_TOOLWINDOW
 #if (_WIN32_WINNT >= 0x0500)
         | WS_EX_LAYERED | WS_EX_NOACTIVATE
@@ -244,9 +243,9 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
         0, 0, 0, 0,
         hWnd, NULL, hInst, NULL);
 
-    SetLayeredWindowAttributes(hClipWnd, RGB(255, 0, 0), 100, LWA_COLORKEY | LWA_ALPHA);
+    ::SetLayeredWindowAttributes(hClipWnd, RGB(255, 0, 0), 100, LWA_COLORKEY | LWA_ALPHA);
 
-    hCursorWnd = CreateWindowExW(
+    hCursorWnd = ::CreateWindowExW(
         WS_EX_TOOLWINDOW
 #if (_WIN32_WINNT >= 0x0500)
         | WS_EX_LAYERED | WS_EX_NOACTIVATE
@@ -256,7 +255,7 @@ BOOL InitInstance(HINSTANCE hInst, int nCmdShow)
         0, 0, 0, 0,
         hWnd, NULL, hInst, NULL);
 
-    SetLayeredWindowAttributes(hCursorWnd, RGB(255, 0, 0), 100, LWA_COLORKEY | LWA_ALPHA);
+    ::SetLayeredWindowAttributes(hCursorWnd, RGB(255, 0, 0), 100, LWA_COLORKEY | LWA_ALPHA);
 
     return TRUE;
 }
@@ -269,8 +268,8 @@ void DrawRubberband(LPRECT newRect)
     if (firstDraw)
     {
         // View clip window
-        ShowWindow(hClipWnd, SW_SHOW);
-        UpdateWindow(hClipWnd);
+        ::ShowWindow(hClipWnd, SW_SHOW);
+        ::UpdateWindow(hClipWnd);
 
         firstDraw = false;
     }
@@ -278,7 +277,7 @@ void DrawRubberband(LPRECT newRect)
     if (newRect == NULL)
     {
         // Hide clip window
-        ShowWindow(hClipWnd, SW_HIDE);
+        ::ShowWindow(hClipWnd, SW_HIDE);
         return;
     }
 
@@ -293,7 +292,7 @@ void DrawRubberband(LPRECT newRect)
         std::swap(clipRect.bottom, clipRect.top);
     }
 
-    MoveWindow(
+    ::MoveWindow(
         hClipWnd,
                clipRect.left,
                clipRect.top,
@@ -310,8 +309,8 @@ void DrawCoordinates(LPRECT newRect)
     if (firstDraw)
     {
         // View coordinate window
-        ShowWindow(hCursorWnd, SW_SHOW);
-        UpdateWindow(hCursorWnd);
+        ::ShowWindow(hCursorWnd, SW_SHOW);
+        ::UpdateWindow(hCursorWnd);
 
         firstDraw = false;
     }
@@ -319,7 +318,7 @@ void DrawCoordinates(LPRECT newRect)
     if (newRect == NULL)
     {
         // Hide the coordinate window
-        ShowWindow(hCursorWnd, SW_HIDE);
+        ::ShowWindow(hCursorWnd, SW_HIDE);
         return;
     }
 
@@ -333,7 +332,7 @@ void DrawCoordinates(LPRECT newRect)
         coordRect.top = screenSize.cy - coordRect.bottom;
     }
 
-    MoveWindow(
+    ::MoveWindow(
         hCursorWnd,
                coordRect.left,
                coordRect.top,
@@ -342,19 +341,19 @@ void DrawCoordinates(LPRECT newRect)
                TRUE);
 }
 
-int DrawLabel(HDC hdc, const GyazoSize& textPos, LPCWSTR sText, int nText)
+int DrawLabel(HDC hdc, const GyazoSize& textPos, LPCWSTR sText, size_t nText)
 {
     int result;
 
-    SetTextColor(hdc, RGB(0, 0, 0));
-    result = TextOutW(hdc, textPos.cx + 1, textPos.cy + 1, sText, nText);
+    ::SetTextColor(hdc, RGB(0, 0, 0));
+    result = ::TextOutW(hdc, textPos.cx + 1, textPos.cy + 1, sText, (int)nText);
     if (result == 0)
     {
         return result;
     }
 
-    SetTextColor(hdc, RGB(255, 255, 255));
-    result = TextOutW(hdc, textPos.cx, textPos.cy, sText, nText);
+    ::SetTextColor(hdc, RGB(255, 255, 255));
+    result = ::TextOutW(hdc, textPos.cx, textPos.cy, sText, (int)nText);
     if (result == 0)
     {
         return result;
@@ -366,21 +365,21 @@ int DrawLabel(HDC hdc, const GyazoSize& textPos, LPCWSTR sText, int nText)
 void EraseBackgroundLayer(const HWND& hWnd)
 {
     GyazoRect winRect;
-    GetWindowRect(hWnd, winRect);
+    ::GetWindowRect(hWnd, winRect);
     GyazoSize clipSize = winRect;
 
-    HDC hdc = GetDC(hWnd);
-    HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
-    SelectObject(hdc, hBrush);
-    HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
-    SelectObject(hdc, hPen);
-    Rectangle(hdc, 0, 0, clipSize.cx, clipSize.cy);
+    HDC hdc = ::GetDC(hWnd);
+    HBRUSH hBrush = ::CreateSolidBrush(RGB(100, 100, 100));
+    ::SelectObject(hdc, hBrush);
+    HPEN hPen = ::CreatePen(PS_DASH, 1, RGB(255, 255, 255));
+    ::SelectObject(hdc, hPen);
+    ::Rectangle(hdc, 0, 0, clipSize.cx, clipSize.cy);
 
     // The output size of the rectangle
-    int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-    SelectObject(hdc, GyazoFont::GetFont(fontHeight));
+    int fontHeight = ::MulDiv(8, ::GetDeviceCaps(hdc, LOGPIXELSY), 72);
+    ::SelectObject(hdc, GyazoFont::GetFont(fontHeight));
 
-    SetBkMode(hdc, TRANSPARENT);
+    ::SetBkMode(hdc, TRANSPARENT);
 
     GyazoSize textSize, textPos;
     wchar_t sText[100];
@@ -396,7 +395,7 @@ void EraseBackgroundLayer(const HWND& hWnd)
     // Draw bottom right coordinates (bottom right corner)
     swprintf_s(sText, GYAZO_POINT_FORMAT, winRect.right, winRect.bottom);
     nText = wcslen(sText);
-    GetTextExtentPointW(hdc, sText, nText, textSize);
+    ::GetTextExtentPointW(hdc, sText, (int)nText, textSize);
     textPos = clipSize - textSize - clipWinTextBorder;
 
     DrawLabel(hdc, textPos, sText, nText);
@@ -404,17 +403,17 @@ void EraseBackgroundLayer(const HWND& hWnd)
     // Draw crop size (center)
     swprintf_s(sText, GYAZO_POINT_FORMAT, clipSize.cx, clipSize.cy);
     nText = wcslen(sText);
-    GetTextExtentPointW(hdc, sText, nText, textSize);
+    ::GetTextExtentPointW(hdc, sText, (int)nText, textSize);
     textPos.cx = (clipSize.cx - textSize.cx) / 2;
     textPos.cy = (clipSize.cy - textSize.cy) / 2;
 
     DrawLabel(hdc, textPos, sText, nText);
 
     // Release resources
-    DeleteObject(hPen);
-    DeleteObject(hBrush);
+    ::DeleteObject(hPen);
+    ::DeleteObject(hBrush);
     GyazoFont::Release();
-    ReleaseDC(hWnd, hdc);
+    ::ReleaseDC(hWnd, hdc);
 }
 
 // Layer window procedure
@@ -423,28 +422,28 @@ LRESULT CALLBACK WndProcClip(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     switch (message)
     {
     case WM_ERASEBKGND:
-        EraseBackgroundLayer(hWnd);
+        ::EraseBackgroundLayer(hWnd);
         return TRUE;
 
     default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return ::DefWindowProcW(hWnd, message, wParam, lParam);
     }
 }
 
 void EraseBackgroundCursor(const HWND& hWnd)
 {
-    HDC hdc = GetDC(hWnd);
-    HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 100));
-    SelectObject(hdc, hBrush);
-    HPEN hPen = CreatePen(PS_DASH, 1, RGB(255, 255, 255));
-    SelectObject(hdc, hPen);
-    Rectangle(hdc, 0, 0, cursorTextSize.cx + 4, cursorTextSize.cy);
+    HDC hdc = ::GetDC(hWnd);
+    HBRUSH hBrush = ::CreateSolidBrush(RGB(100, 100, 100));
+    ::SelectObject(hdc, hBrush);
+    HPEN hPen = ::CreatePen(PS_DASH, 1, RGB(255, 255, 255));
+    ::SelectObject(hdc, hPen);
+    ::Rectangle(hdc, 0, 0, cursorTextSize.cx + 4, cursorTextSize.cy);
 
     // The output size of the rectangle
     int fontHeight = MulDiv(8, GetDeviceCaps(hdc, LOGPIXELSY), 72);
-    SelectObject(hdc, GyazoFont::GetFont(fontHeight));
+    ::SelectObject(hdc, GyazoFont::GetFont(fontHeight));
 
-    SetBkMode(hdc, TRANSPARENT);
+    ::SetBkMode(hdc, TRANSPARENT);
 
     GyazoSize textPos;
     wchar_t sText[100];
@@ -452,17 +451,17 @@ void EraseBackgroundCursor(const HWND& hWnd)
     // Draw mouse coordinates
     swprintf(sText, sizeof(sText) / sizeof(*sText), GYAZO_POINT_FORMAT, cursorPos.cx, cursorPos.cy);
     size_t nText = wcslen(sText);
-    GetTextExtentPointW(hdc, sText, nText, cursorTextSize);
+    ::GetTextExtentPointW(hdc, sText, (int)nText, cursorTextSize);
     textPos.cx = 2;
     textPos.cy = 0;
 
     DrawLabel(hdc, textPos, sText, nText);
 
     // Release resources
-    DeleteObject(hPen);
-    DeleteObject(hBrush);
+    ::DeleteObject(hPen);
+    ::DeleteObject(hBrush);
     GyazoFont::Release();
-    ReleaseDC(hWnd, hdc);
+    ::ReleaseDC(hWnd, hdc);
 }
 
 // Cursor window procedure
@@ -471,7 +470,7 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
     switch (message)
     {
     case WM_ERASEBKGND:
-        EraseBackgroundCursor(hWnd);
+        ::EraseBackgroundCursor(hWnd);
         return TRUE;
 
     default:
@@ -481,10 +480,10 @@ LRESULT CALLBACK WndProcCursor(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 
 void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
 {
-    HDC hdc = GetDC(NULL);
+    HDC hdc = ::GetDC(NULL);
 
     // I turn off the line
-    DrawRubberband(NULL);
+    ::DrawRubberband(NULL);
 
     // Check coordinate
     if (clipRect.right < clipRect.left)
@@ -504,29 +503,29 @@ void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
     if (imageSize.cx == 0 || imageSize.cy == 0)
     {
         // It is not already in the image , it is not nothing
-        ReleaseDC(NULL, hdc);
-        DestroyWindow(hWnd);
+        ::ReleaseDC(NULL, hdc);
+        ::DestroyWindow(hWnd);
         return;
     }
 
     // Create a bitmap buffer
-    HBITMAP newBMP = CreateCompatibleBitmap(hdc, imageSize.cx, imageSize.cy);
-    HDC newDC = CreateCompatibleDC(hdc);
+    HBITMAP newBMP = ::CreateCompatibleBitmap(hdc, imageSize.cx, imageSize.cy);
+    HDC newDC = ::CreateCompatibleDC(hdc);
 
     // Associated
-    SelectObject(newDC, newBMP);
+    ::SelectObject(newDC, newBMP);
 
     // Portraitをobtain
-    BitBlt(newDC, 0, 0, imageSize.cx, imageSize.cy,
+    ::BitBlt(newDC, 0, 0, imageSize.cx, imageSize.cy,
            hdc, clipRect.left, clipRect.top, SRCCOPY);
 
     // Hide the window
-    ShowWindow(hWnd, SW_HIDE);
+    ::ShowWindow(hWnd, SW_HIDE);
 
     // The determination of the temporary file name
     wchar_t tmpDir[MAX_PATH], tmpFile[MAX_PATH];
-    GetTempPathW(MAX_PATH, tmpDir);
-    GetTempFileNameW(tmpDir, GYAZO_PREFIX, 0, tmpFile);
+    ::GetTempPathW(MAX_PATH, tmpDir);
+    ::GetTempFileNameW(tmpDir, GYAZO_PREFIX, 0, tmpFile);
 
     if (BitmapToPng(newBMP, tmpFile))
     {
@@ -539,12 +538,12 @@ void SaveAndUpload(const HWND& hWnd, GyazoRect& clipRect)
     }
 
     // Clean up
-    DeleteFileW(tmpFile);
+    ::DeleteFileW(tmpFile);
 
-    DeleteDC(newDC);
-    DeleteObject(newBMP);
+    ::DeleteDC(newDC);
+    ::DeleteObject(newBMP);
 
-    ReleaseDC(NULL, hdc);
+    ::ReleaseDC(NULL, hdc);
 }
 
 // Window procedure
@@ -557,15 +556,15 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     {
     case WM_RBUTTONDOWN:
         // Cancellation
-        DestroyWindow(hWnd);
-        return DefWindowProcW(hWnd, message, wParam, lParam);
+        ::DestroyWindow(hWnd);
+        return ::DefWindowProcW(hWnd, message, wParam, lParam);
 
     case WM_TIMER:
         // Detection of the ESC key is pressed
-        if (GetKeyState(VK_ESCAPE) & 0x8000)
+        if (::GetKeyState(VK_ESCAPE) & 0x8000)
         {
-            DestroyWindow(hWnd);
-            return DefWindowProcW(hWnd, message, wParam, lParam);
+            ::DestroyWindow(hWnd);
+            return ::DefWindowProcW(hWnd, message, wParam, lParam);
         }
         break;
 
@@ -589,10 +588,10 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             cursorWinRect.bottom = cursorTextSize.cy;
 
             DrawCoordinates(cursorWinRect);
-            SendMessageW(hCursorWnd, WM_ERASEBKGND, NULL, NULL);
+            ::SendMessageW(hCursorWnd, WM_ERASEBKGND, NULL, NULL);
         }
 
-        SetCapture(hWnd);
+        ::SetCapture(hWnd);
         break;
 
 
@@ -600,7 +599,7 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         // Clip start
         isClip = true;
 
-        ReleaseCapture();
+        ::ReleaseCapture();
 
         // hide windows with mouse coordinates
         DrawCoordinates(NULL);
@@ -610,7 +609,7 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         clipRect.top = HIWORD(lParam) + screenOffset.cy;
 
         // Capture the mouse
-        SetCapture(hWnd);
+        ::SetCapture(hWnd);
         break;
 
     case WM_LBUTTONUP:
@@ -618,7 +617,7 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         isClip = false;
 
         // And release the mouse capture
-        ReleaseCapture();
+        ::ReleaseCapture();
 
         // Set the new coordinate
         clipRect.right = LOWORD(lParam) + screenOffset.cx;
@@ -627,16 +626,16 @@ LRESULT CALLBACK WndProcMain(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         // Screen ni direct drawing,っte -shaped
         SaveAndUpload(hWnd, clipRect);
 
-        DestroyWindow(hWnd);
-        PostQuitMessage(0);
+        ::DestroyWindow(hWnd);
+        ::PostQuitMessage(0);
         break;
 
     case WM_DESTROY:
-        PostQuitMessage(0);
+        ::PostQuitMessage(0);
         break;
 
     default:
-        return DefWindowProcW(hWnd, message, wParam, lParam);
+        return ::DefWindowProcW(hWnd, message, wParam, lParam);
     }
 
     return 0;

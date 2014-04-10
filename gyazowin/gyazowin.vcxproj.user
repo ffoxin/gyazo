@@ -8,4 +8,12 @@
     <DeploymentDirectory>C:\Temp\gyazo</DeploymentDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <RemoteDebuggerCommand>C:\Temp\gyazo\gyazowin.exe</RemoteDebuggerCommand>
+    <RemoteDebuggerWorkingDirectory>C:\Temp\gyazo</RemoteDebuggerWorkingDirectory>
+    <RemoteDebuggerServerName>СЕРГЕЙ-HP:4016</RemoteDebuggerServerName>
+    <RemoteDebuggerDebuggerType>NativeOnly</RemoteDebuggerDebuggerType>
+    <DeploymentDirectory>C:\Temp\gyazo</DeploymentDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>

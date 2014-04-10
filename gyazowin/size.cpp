@@ -11,7 +11,12 @@ BaseSize::BaseSize()
 
 BaseSize& BaseSize::operator=(const BaseSize& baseSize)
 {
-    size = baseSize.size;
+    if (this != &baseSize)
+    {
+        size = baseSize.size;
+    }
+
+    return *this;
 }
 
 void BaseSize::Init(const LONG& cx_, const LONG& cy_)

@@ -17,30 +17,24 @@ using namespace std;
 
 #include "gyazolib.h"
 
-// I get the CLSID of the Encoder corresponding to the specified format
-// Cited from MSDN Library: Retrieving the Class Identifier for an Encoder
+// Get the CLSID of the Encoder related to the specified format
+// MSDN Library: Retrieving the Class Identifier for an Encoder
 bool GetEncoderClsid(const wstring& format, CLSID& clsid)
 {
-    size_t num = 0;     // number of image encoders
-    size_t size = 0;    // size of the image encoder array in bytes
+    UINT num = 0;     // number of image encoders
+    UINT size = 0;    // size of the image encoder array in bytes
 
-    if (GetImageEncodersSize(&num, &size) != Status::Ok)
+    if (::GetImageEncodersSize(&num, &size) != Status::Ok)
     {
         return false;
     }
 
     if (size != 0)
     {
-        shared_ptr<char> imageCodecInfo(
-            new char[size],
-            [](char* p)
-        {
-            delete[] p;
-        } // deleter functor
-        );
+        unique_ptr<char[]> imageCodecInfo(new char[size]);
         ImageCodecInfo* pImageCodecInfo = reinterpret_cast<ImageCodecInfo*>(imageCodecInfo.get());
 
-        GetImageEncoders(num, size, pImageCodecInfo);
+        ::GetImageEncoders(num, size, pImageCodecInfo);
 
         for (size_t i = 0; i < num; ++i)
         {
@@ -75,7 +69,6 @@ bool IsPngFile(const wstring& fileName)
         return false;
     }
 
-    // compare
     if (memcmp(pngHeader, fileHeader, sizeof(pngHeader)) != 0)
     {
         return false;
@@ -84,8 +77,8 @@ bool IsPngFile(const wstring& fileName)
     return true;
 }
 
-// I open a browser (char *) URL that is specified
-void ExecUrl(const wstring& url)
+// Open a browser (char *) URL that is specified
+BOOL ExecUrl(const wstring& url)
 {
     // Run the open command
     SHELLEXECUTEINFO lsw = { };
@@ -93,64 +86,85 @@ void ExecUrl(const wstring& url)
     lsw.lpVerb = GYAZO_URL_OPEN;
     lsw.lpFile = url.c_str();
 
-    ShellExecuteExW(&lsw);
+    return ::ShellExecuteExW(&lsw);
 }
 
 // Copy text to clipboard
-void SetClipBoard(const wstring& text)
+BOOL SetClipboard(const wstring& text)
 {
     size_t slen = text.size() + 1;
 
-    HGLOBAL hText = GlobalAlloc(
+    unique_ptr<void, decltype(&::GlobalFree)> ptr_hText(
+        ::GlobalAlloc(
         GMEM_DDESHARE | GMEM_MOVEABLE,
         slen * sizeof(wchar_t)
+        ),
+        &::GlobalFree
         );
+    HGLOBAL hText = ptr_hText.get();
 
     if (hText == NULL)
     {
-        return;
+        return FALSE;
     }
 
-    LPVOID lockedMem = GlobalLock(hText);
+    LPVOID lockedMem = ::GlobalLock(hText);
     if (lockedMem == NULL)
     {
-        GlobalFree(hText);
-        return;
+        return FALSE;
     }
+
     wchar_t* pText = static_cast<wchar_t *>(lockedMem);
     wcscpy_s(pText, slen, text.c_str());
-    GlobalUnlock(hText);
+    if (::GlobalUnlock(hText) == 0)
+    {
+        return FALSE;
+    }
 
-    // I open the clipboard
-    OpenClipboard(NULL);
-    EmptyClipboard();
-    SetClipboardData(CF_UNICODETEXT, hText);
-    CloseClipboard();
+    if (::OpenClipboard(NULL) == 0)
+    {
+        return FALSE;
+    }
+    if (::EmptyClipboard() == 0)
+    {
+        return FALSE;
+    }
+    if (::SetClipboardData(CF_UNICODETEXT, hText) == NULL)
+    {
+        return FALSE;
+    }
+    if (::CloseClipboard() == 0)
+    {
+        return FALSE;
+    }
 
-    // Liberation
-    GlobalFree(hText);
+    return TRUE;
 }
 
 // Save Image class data to file
-bool ImageToPng(Image* image, const wchar_t* fileName)
+BOOL ImageToPng(Image* image, const wchar_t* fileName)
 {
-    if (image->GetLastStatus() == 0)
+    if (image->GetLastStatus() != 0)
     {
-        CLSID clsidEncoder;
-        if (GetEncoderClsid(L"image/png", clsidEncoder))
-        {
-            if (image->Save(fileName, &clsidEncoder, 0) == 0)
-            {
-                return true;
-            }
-        }
+        return FALSE;
     }
 
-    return false;
+    CLSID clsidEncoder;
+    if (!GetEncoderClsid(L"image/png", clsidEncoder))
+    {
+        return FALSE;
+    }
+
+    if (image->Save(fileName, &clsidEncoder, 0) != 0)
+    {
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 // Convert to PNG format
-bool FileToPng(const wchar_t* srcFile, const wchar_t* destFile)
+BOOL FileToPng(const wchar_t* srcFile, const wchar_t* destFile)
 {
     const GdiInit gpi = GdiInit();
 
@@ -160,7 +174,7 @@ bool FileToPng(const wchar_t* srcFile, const wchar_t* destFile)
 }
 
 // save BITMAP to PNG file
-bool BitmapToPng(HBITMAP hBmp, const wchar_t* fileName)
+BOOL BitmapToPng(HBITMAP hBmp, const wchar_t* fileName)
 {
     const GdiInit gpi = GdiInit();
 
@@ -201,7 +215,7 @@ void ReportError()
     if (error)
     {
         wchar_t* buf;
-        FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER
+        ::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER
                        | FORMAT_MESSAGE_FROM_SYSTEM
                        | FORMAT_MESSAGE_FROM_HMODULE,
                        GetModuleHandleW(L"Winhttp.dll"),
@@ -213,9 +227,9 @@ void ReportError()
 
         wstringstream wss;
         wss << "[" << error << "] " << buf;
-        LocalFree(buf);
+        ::LocalFree(buf);
 
-        MessageBoxW(NULL, wss.str().c_str(), L"Error", MB_OK);
+        ::MessageBoxW(NULL, wss.str().c_str(), L"Error", MB_OK);
     }
     ExitProcess(error);
 }
@@ -274,7 +288,7 @@ bool UploadFile(const wchar_t* fileName)
     string request = BuildRequest(fileName);
 
     // WinInet preparation
-    InternetHandle hSession = InternetOpenW(
+    InternetHandle hSession = ::InternetOpenW(
         sTitle,
         INTERNET_OPEN_TYPE_PRECONFIG,
         NULL,
@@ -286,7 +300,7 @@ bool UploadFile(const wchar_t* fileName)
     }
 
     // Access point
-    InternetHandle hConnection = InternetConnectW(
+    InternetHandle hConnection = ::InternetConnectW(
         hSession,
         GYAZO_UPLOAD_SERVER,
         INTERNET_DEFAULT_HTTP_PORT,
@@ -301,7 +315,7 @@ bool UploadFile(const wchar_t* fileName)
     }
 
     // Full set requirements before
-    InternetHandle hRequest = HttpOpenRequestW(
+    InternetHandle hRequest = ::HttpOpenRequestW(
         hConnection,
         GYAZO_POST,
         GYAZO_UPLOAD_PATH,
@@ -317,10 +331,10 @@ bool UploadFile(const wchar_t* fileName)
     }
 
     // User Agent
-    BOOL bResult = HttpAddRequestHeadersW(
+    BOOL bResult = ::HttpAddRequestHeadersW(
         hRequest,
         GYAZO_USER_AGENT,
-        wcslen(GYAZO_USER_AGENT),
+        (DWORD)wcslen(GYAZO_USER_AGENT),
         HTTP_ADDREQ_FLAG_ADD
         | HTTP_ADDREQ_FLAG_REPLACE);
     if (bResult == FALSE)
@@ -328,12 +342,12 @@ bool UploadFile(const wchar_t* fileName)
         ReportError();
     }
 
-    bResult = HttpSendRequestW(
+    bResult = ::HttpSendRequestW(
         hRequest,
         GYAZO_HEADER,
-        wcslen(GYAZO_HEADER),
+        (DWORD)wcslen(GYAZO_HEADER),
         (LPVOID)request.c_str(),
-        request.size());
+        (DWORD)request.size());
     if (bResult == FALSE)
     {
         ReportError();
@@ -343,10 +357,10 @@ bool UploadFile(const wchar_t* fileName)
     wchar_t buffer[101] = { };
 
     // state code
-    bResult = HttpQueryInfoW(
-        hRequest, 
-        HTTP_QUERY_STATUS_CODE, 
-        buffer, 
+    bResult = ::HttpQueryInfoW(
+        hRequest,
+        HTTP_QUERY_STATUS_CODE,
+        buffer,
         &bufferLength,
         0);
     if (bResult == FALSE ||
@@ -357,13 +371,13 @@ bool UploadFile(const wchar_t* fileName)
 
     // get new id
     wcscpy_s(buffer, GYAZO_ID);
-    bResult = HttpQueryInfoW(
-        hRequest, 
-        HTTP_QUERY_CUSTOM, 
+    bResult = ::HttpQueryInfoW(
+        hRequest,
+        HTTP_QUERY_CUSTOM,
         buffer,
         &bufferLength,
         0);
-    if (bResult == TRUE
+    if (bResult != FALSE
         && GetLastError() != ERROR_HTTP_HEADER_NOT_FOUND
         && bufferLength != 0)
     {
@@ -377,18 +391,18 @@ bool UploadFile(const wchar_t* fileName)
     wstring srcUrl;
 
     // Never so long , but once well
-    while (InternetReadFile(hRequest, url, 1024, &urlLength) == TRUE &&
-           urlLength != 0)
+    while (::InternetReadFile(hRequest, url, 10, &urlLength) != FALSE
+           && urlLength != 0)
     {
         srcUrl.append(url, url + urlLength);
     }
 
     // Prepare url
     srcUrl.insert(srcUrl.find(L"gyazo.com"), L"cache.");
-    srcUrl += L".png";
+    srcUrl.append(L".png");
 
     // Copy URL to clipboard and open in browser
-    SetClipBoard(srcUrl);
+    SetClipboard(srcUrl);
     ExecUrl(srcUrl);
 
     return true;
@@ -427,7 +441,7 @@ string GetId()
 bool SaveId(const wstring& sId)
 {
     // save the ID to file
-    CreateDirectoryW(GetIdDirPath().c_str(), NULL);
+    ::CreateDirectoryW(GetIdDirPath().c_str(), NULL);
 
     wofstream ofs;
     ofs.open(GetIdFilePath());
@@ -437,9 +451,9 @@ bool SaveId(const wstring& sId)
         ofs.close();
 
         // Delete the old configuration file
-        if (PathFileExistsW(GYAZO_ID_FILENAME))
+        if (::PathFileExistsW(GYAZO_ID_FILENAME))
         {
-            DeleteFileW(GYAZO_ID_FILENAME);
+            ::DeleteFileW(GYAZO_ID_FILENAME);
         }
     }
     else
@@ -452,7 +466,7 @@ bool SaveId(const wstring& sId)
 
 int ErrorMessage(const wstring& text)
 {
-    return MessageBoxW(NULL, text.c_str(), sTitle, MB_ICONERROR | MB_OK);
+    return ::MessageBoxW(NULL, text.c_str(), sTitle, MB_ICONERROR | MB_OK);
 }
 
 wstring GetIdDirPath()
@@ -461,7 +475,7 @@ wstring GetIdDirPath()
 
     if (!wcslen(idDir))
     {
-        SHGetSpecialFolderPathW(
+        ::SHGetSpecialFolderPathW(
             NULL,
             idDir,
             CSIDL_APPDATA,

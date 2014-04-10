@@ -25,7 +25,7 @@ GyazoFont::GyazoFont(int fontHeight)
 {
     m_fontHeight = fontHeight;
 
-    m_font = CreateFontW(
+    m_font = ::CreateFontW(
         (-1) * fontHeight,  // Font height
         0,                  // Text parcels
         0,                  // Angle of text
@@ -45,7 +45,7 @@ GyazoFont::GyazoFont(int fontHeight)
 
 GyazoFont::~GyazoFont()
 {
-    DeleteObject(m_font);
+    ::DeleteObject(m_font);
 }
 
 void GyazoFont::Release()
