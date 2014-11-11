@@ -1,11 +1,13 @@
 #include "font.h"
 
-// Project headers
 #include "stringconstants.h"
 
-GyazoFont* GyazoFont::m_instance = NULL;
+namespace Gyazo
+{
 
-HFONT GyazoFont::GetFont(int fontHeight)
+Font* Font::m_instance = NULL;
+
+HFONT Font::GetFont(int fontHeight)
 {
     if (m_instance != NULL
         && fontHeight != m_instance->m_fontHeight)
@@ -15,13 +17,13 @@ HFONT GyazoFont::GetFont(int fontHeight)
 
     if (m_instance == NULL)
     {
-        m_instance = new GyazoFont(fontHeight);
+        m_instance = new Font(fontHeight);
     }
 
     return m_instance->m_font;
 }
 
-GyazoFont::GyazoFont(int fontHeight)
+Font::Font(int fontHeight)
 {
     m_fontHeight = fontHeight;
 
@@ -39,17 +41,18 @@ GyazoFont::GyazoFont(int fontHeight)
         CLIP_DEFAULT_PRECIS,// Clipping accuracy
         PROOF_QUALITY,      // Output Quality
         FIXED_PITCH | FF_MODERN, // Family pitch
-        GYAZO_FONT_NAME     // Face name
-        );
+        Ui::FONT_NAME);     // Face name
 }
 
-GyazoFont::~GyazoFont()
+Font::~Font()
 {
     ::DeleteObject(m_font);
 }
 
-void GyazoFont::Release()
+void Font::Release()
 {
     delete m_instance;
     m_instance = NULL;
 }
+
+} // namespace Gyazo

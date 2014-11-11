@@ -163,29 +163,31 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="font.cpp" />
-    <ClCompile Include="gdiinit.cpp" />
-    <ClCompile Include="gyazo.cpp" />
-    <ClCompile Include="gyazolib.cpp" />
-    <ClCompile Include="rect.cpp" />
-    <ClCompile Include="size.cpp" />
-    <ClCompile Include="stringconstants.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="font.h" />
-    <ClInclude Include="gdiinit.h" />
-    <ClInclude Include="gyazolib.h" />
-    <ClInclude Include="rect.h" />
-    <ClInclude Include="resource.h" />
-    <ClInclude Include="size.h" />
-    <ClInclude Include="stringconstants.h" />
-    <ClInclude Include="types.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ResourceCompile Include="gyazo.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="icon1.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Convertion.h" />
+    <ClInclude Include="Font.h" />
+    <ClInclude Include="GdiInit.h" />
+    <ClInclude Include="GyazoLib.h" />
+    <ClInclude Include="Rect.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="Size.h" />
+    <ClInclude Include="StringConstants.h" />
+    <ClInclude Include="Types.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Convertion.cpp" />
+    <ClCompile Include="Font.cpp" />
+    <ClCompile Include="GdiInit.cpp" />
+    <ClCompile Include="Gyazo.cpp" />
+    <ClCompile Include="GyazoLib.cpp" />
+    <ClCompile Include="Rect.cpp" />
+    <ClCompile Include="Size.cpp" />
+    <ClCompile Include="StringConstants.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,10 +1,11 @@
-#ifndef GDIINIT_H
-#define GDIINIT_H
+#pragma once
 
 // System headers
 #include <windows.h>
 #include <gdiplus.h>
-using namespace Gdiplus;
+
+namespace Gyazo
+{
 
 class GdiInit
 {
@@ -13,8 +14,8 @@ public:
     ~GdiInit();
 
 private:
-    GdiplusStartupInput     m_startupInput;
+    Gdiplus::GdiplusStartupInput     m_startupInput;
     ULONG_PTR               m_token;
 };
 
-#endif // GDIINIT_H
+} // namespace Gyazo

@@ -1,23 +1,25 @@
-#ifndef FONT_H
-#define FONT_H
+#pragma once
 
 // System headers
 #include <windows.h>
 
-class GyazoFont
+namespace Gyazo
+{
+
+class Font
 {
 public:
     static HFONT GetFont(int fontHeight);
     static void Release();
 
 private:
-    GyazoFont(int fontHeight);
-    ~GyazoFont();
+    explicit Font(int fontHeight);
+    ~Font();
 
 private:
-    static GyazoFont* m_instance;
+    static Font* m_instance;
     HFONT m_font;
     int m_fontHeight;
 };
 
-#endif // FONT_H
+} // namespace Gyazo

@@ -1,13 +1,12 @@
-#ifndef TYPES_H
-#define TYPES_H
+#pragma once
 
-// STL headers
-#include <string>
-using namespace std;
-
-// Project headers
 #include "rect.h"
 #include "size.h"
+
+#include <string>
+
+namespace Gyazo
+{
 
 typedef signed char         int8_t;
 typedef signed short        int16_t;
@@ -18,4 +17,4 @@ typedef unsigned short      uint16_t;
 typedef unsigned int        uint32_t;
 typedef unsigned __int64    uint64_t;
 
-#endif // TYPES_H
+} // namespace Gyazo
