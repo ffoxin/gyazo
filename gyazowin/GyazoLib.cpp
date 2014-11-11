@@ -1,8 +1,9 @@
-﻿#include "gyazolib.h"
+﻿#include "GyazoLib.h"
 
-#include "gdiinit.h"
-#include "stringconstants.h"
-#include "convertion.h"
+#include "System.h"
+#include "GdiInit.h"
+#include "StringConstants.h"
+#include "Convertion.h"
 
 #include <ShlObj.h>
 #include <Shlwapi.h>
@@ -84,7 +85,7 @@ BOOL ExecUrl(std::wstring const& url)
     // Run the open command
     SHELLEXECUTEINFO lsw = {};
     lsw.cbSize = sizeof(SHELLEXECUTEINFO);
-    lsw.lpVerb = Web::URL_OPEN;
+    lsw.lpVerb = Windows::URL_OPEN;
     lsw.lpFile = url.c_str();
 
     return ::ShellExecuteExW(&lsw);
@@ -438,7 +439,7 @@ std::string GetId()
 bool SaveId(std::wstring const& sId)
 {
     // save the ID to file
-    ::CreateDirectoryW(GetIdDirPath().c_str(), NULL);
+    ::CreateDirectoryW(System::GetIdDirPath().c_str(), NULL);
 
     std::wofstream ofs;
     ofs.open(GetIdFilePath());
@@ -466,30 +467,13 @@ int ErrorMessage(std::wstring const& text)
     return ::MessageBoxW(NULL, text.c_str(), Windows::sTitle, MB_ICONERROR | MB_OK);
 }
 
-std::wstring GetIdDirPath()
-{
-    static wchar_t idDir[MAX_PATH] = {};
-
-    if (!wcslen(idDir))
-    {
-        ::SHGetSpecialFolderPathW(
-            NULL,
-            idDir,
-            CSIDL_APPDATA,
-            FALSE);
-        wcscat_s(idDir, Web::DIRNAME);
-    }
-
-    return idDir;
-}
-
 std::wstring GetIdFilePath()
 {
     static std::wstring idFile;
 
     if (!idFile.length())
     {
-        idFile = GetIdDirPath() + Web::ID_FILEPATH;
+        idFile = System::GetIdDirPath() + Web::ID_FILEPATH;
     }
 
     return idFile;

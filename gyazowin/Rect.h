@@ -1,6 +1,6 @@
 #pragma once
 
-#include "size.h"
+#include "Size.h"
 
 #include <windows.h>
 

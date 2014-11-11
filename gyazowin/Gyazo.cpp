@@ -4,10 +4,10 @@
 // 2013-05-25
 //
 
-#include "font.h"
-#include "gyazolib.h"
-#include "resource.h"
-#include "stringconstants.h"
+#include "Font.h"
+#include "GyazoLib.h"
+#include "Resource.h"
+#include "StringConstants.h"
 
 #include <windows.h>
 #include <Shlwapi.h>

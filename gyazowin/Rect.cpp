@@ -1,4 +1,4 @@
-#include "rect.h"
+#include "Rect.h"
 
 namespace Gyazo
 {

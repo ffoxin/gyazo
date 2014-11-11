@@ -1,6 +1,6 @@
-#include "font.h"
+#include "Font.h"
 
-#include "stringconstants.h"
+#include "StringConstants.h"
 
 namespace Gyazo
 {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "rect.h"
-#include "size.h"
+#include "Rect.h"
+#include "Size.h"
 
 #include <string>
 

@@ -7,7 +7,6 @@ namespace Common
 {
 
 extern wchar_t const* const PREFIX;
-extern wchar_t const* const READ_BINARY;
 
 } // namespace Common
 
@@ -27,13 +26,13 @@ extern wchar_t const* const sWindowMainClass;
 extern wchar_t const* const sWindowLayerClass;
 extern wchar_t const* const sWindowCursorClass;
 extern wchar_t const* const ERROR_CONVERT_IMAGE;
+extern wchar_t const* const URL_OPEN;
 
 } // namespace Windows
 
 namespace Web
 {
 
-extern wchar_t const* const URL_OPEN;
 extern wchar_t const* const UPLOAD_SERVER;
 extern wchar_t const* const UPLOAD_PATH;
 extern wchar_t const* const USER_AGENT;
@@ -43,7 +42,7 @@ extern wchar_t const* const ID_FILENAME;
 extern wchar_t const* const DIRNAME;
 extern wchar_t const* const ID_FILEPATH;
 extern wchar_t const* const POST;
-extern wchar_t const* const URL_DIVIDER;
+extern char const* const URL_DIVIDER;
 
 extern char const* const sBoundary;
 extern char const* const sDivider;

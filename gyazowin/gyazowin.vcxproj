@@ -169,6 +169,7 @@
     <Image Include="icon1.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Config.h" />
     <ClInclude Include="Convertion.h" />
     <ClInclude Include="Font.h" />
     <ClInclude Include="GdiInit.h" />
@@ -177,9 +178,11 @@
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Size.h" />
     <ClInclude Include="StringConstants.h" />
+    <ClInclude Include="System.h" />
     <ClInclude Include="Types.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Config.cpp" />
     <ClCompile Include="Convertion.cpp" />
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="GdiInit.cpp" />
@@ -188,6 +191,7 @@
     <ClCompile Include="Rect.cpp" />
     <ClCompile Include="Size.cpp" />
     <ClCompile Include="StringConstants.cpp" />
+    <ClCompile Include="System.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,4 +1,4 @@
-#include "gdiinit.h"
+#include "GdiInit.h"
 
 namespace Gyazo
 {
